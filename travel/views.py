@@ -14,7 +14,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import TourFilter
-from rest_framework.filters import SearchFilter
+from rest_framework.decorators import action
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -96,6 +97,52 @@ class FilterByStatusView(APIView):
 class TourViewSet(ModelViewSet):
     queryset = Tour.objects.all()
     serializer_class = TourSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend]
     filterset_class = TourFilter
-    search_fields = ['name_tour', 'discription_tour']
+  
+    @action(methods=['get'], detail=False)
+    def completed_tours(self, request):
+        today = date.today()
+        completed_tours = Tour.objects.filter(date_return__lt=today)
+        serializer = self.get_serializer(completed_tours, many=True)
+        return Response(serializer.data)
+
+    @action(methods=['get'], detail=True)
+    def tour_history(self, request, pk=None):
+        tour = self.get_object()
+        history = tour.history.all()
+
+        history_data = []
+        for record in history:
+            history_data.append({
+                "id": record.id,
+                "name_tour": record.name_tour,
+                "price_tour": record.price_tour,
+                "operator_tour": record.operator_tour,
+                "date_modified": record.history_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "modified_by": record.history_user.username if record.history_user else "System",
+                "history_type": record.history_type,
+            })
+
+        return Response({
+            "tour": tour.name_tour,
+            "history": history_data
+        })
+    
+class StockViewSet(ModelViewSet):
+    queryset = Stock.objects.all()
+    serializer_class = StockSerializer
+
+    @action(methods=['post'], detail=True)
+    def change_status(self, request, pk=None):
+        stock = self.get_object()
+        new_status = request.data.get('status', None)
+
+        if new_status not in ['true', 'false', 'True', 'False']:
+            return Response({"error": "Статус должен быть 'true' или 'false'"}, status=400)
+
+        stock.status_stock = new_status.lower() == 'true'
+        stock.save()
+        return Response({
+            "message": f"Статус акции '{stock.name_stock}' изменен на '{'Активна' if stock.status_stock else 'Неактивна'}'."
+        })

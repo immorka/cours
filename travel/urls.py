@@ -13,7 +13,7 @@ router.register('reservations', ReservationViewSet)
 router.register('reviews', ReviewViewSet)
 router.register('travel-history', TravelHistoryViewSet)
 router.register('favorites', FavoriteViewSet)
-router.register('stocks', StockViewSet)
+router.register('stocks', StockViewSet, basename='stocks')
 
 urlpatterns = router.urls + [
     path('complex-tours/', ComplexTourQueryView.as_view(), name='complex-tours'),

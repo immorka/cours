@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from simple_history.models import HistoricalRecords
 
 def validate_positive(value):
     if value <= 0:
@@ -30,7 +31,7 @@ class Tour(models.Model):
     date_return = models.DateField("Дата возвращения")
     operator_tour = models.CharField("Туроператор", max_length=255)
     places_tour = models.IntegerField("Количество мест", validators=[validate_positive])
-
+    history = HistoricalRecords()
     def clean(self):
         validate_date_range(self.date_departure, self.date_return)
         if Tour.objects.filter(name_tour=self.name_tour).exclude(id=self.id).exists():
