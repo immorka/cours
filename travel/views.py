@@ -1,9 +1,15 @@
 from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Q
+from datetime import date
 from .models import User, Tour, Reservation, Review, TravelHistory, Favorite, Stock
 from .serializers import (
     UserSerializer, TourSerializer, ReservationSerializer,
     ReviewSerializer, TravelHistorySerializer, FavoriteSerializer, StockSerializer
 )
+from django.contrib.auth.models import AnonymousUser
+from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -32,3 +38,43 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 class StockViewSet(viewsets.ModelViewSet):
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
+
+class ComplexTourQueryView(APIView):
+    def get(self, request):
+        min_price = int(request.query_params.get("min_price", 10000))
+        max_price = int(request.query_params.get("max_price", 50000))
+        departure_city = request.query_params.get("departure", "Москва")
+        end_date = request.query_params.get("end_date", "2024-12-31")
+
+        tours = Tour.objects.filter(
+            Q(price_tour__gte=min_price) & Q(price_tour__lte=max_price) & Q(departure=departure_city) &
+            Q(date_return__lte=end_date)
+        ).exclude(operator_tour="Coral Travel")
+
+        serializer = TourSerializer(tours, many=True)
+        return Response(serializer.data)
+
+class ComplexReservationQueryView(APIView):
+    def get(self, request):
+        from datetime import date
+        from django.shortcuts import get_object_or_404
+        from django.db.models import Q
+
+        user_id = request.query_params.get("user_id", None)
+        if not user_id:
+            return Response({"error": "Отсуствует обязательный параметр user_id"}, status=400)
+
+        user = get_object_or_404(User, id=user_id)
+        today = date.today()
+
+        reservations = Reservation.objects.filter(
+            id_user=user
+        ).filter(
+            Q(status_pay=False) & Q(date_reservation__lt=today)
+        ).exclude(
+            id_tour__date_return__lt=today
+        )
+
+        serializer = ReservationSerializer(reservations, many=True)
+        return Response(serializer.data)
+
