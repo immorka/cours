@@ -10,6 +10,11 @@ from .serializers import (
 )
 from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.viewsets import ModelViewSet
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import TourFilter
+from rest_framework.filters import SearchFilter
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -75,6 +80,22 @@ class ComplexReservationQueryView(APIView):
             id_tour__date_return__lt=today
         )
 
+        paginator = PageNumberPagination()
+        paginator.page_size = 5
+        paginated_reservations = paginator.paginate_queryset(reservations, request)
+
+        serializer = ReservationSerializer(paginated_reservations, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+class FilterByStatusView(APIView):
+    def get(self, request, status):
+        reservations = Reservation.objects.filter(status_pay=status)
         serializer = ReservationSerializer(reservations, many=True)
         return Response(serializer.data)
 
+class TourViewSet(ModelViewSet):
+    queryset = Tour.objects.all()
+    serializer_class = TourSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = TourFilter
+    search_fields = ['name_tour', 'discription_tour']
