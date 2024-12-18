@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'travel',
     'rest_framework',
     'django_filters',
+    'import_export',
 ]
 
 REST_FRAMEWORK = {
