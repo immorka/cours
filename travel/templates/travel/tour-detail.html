@@ -1,0 +1,39 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Детали тура{% endblock %}
+
+{% block content %}
+<style>
+    .card-text, .description {
+        word-wrap: break-word; /* Перенос длинных слов */
+        word-break: break-word; /* Для длинных слов без пробелов */
+        white-space: normal; /* Убедимся, что текст переносится */
+    }
+</style>
+
+<div class="container py-5">
+    <h1 class="mb-4">{{ tour.name_tour }}</h1>
+    <div class="row">
+        <div class="col-md-6">
+            {% if tour.image %}
+            <img src="{{ tour.image.url }}" class="img-fluid rounded" alt="{{ tour.name_tour }}">
+            {% else %}
+            <img src="https://via.placeholder.com/600x400" class="img-fluid rounded" alt="Изображение недоступно">
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h3>Цена: €{{ tour.price_tour }}</h3>
+            <p class="description">{{ tour.discription_tour }}</p>
+            <p><strong>Место отправления:</strong> {{ tour.departure }}</p>
+            <p><strong>Место назначения:</strong> {{ tour.destination }}</p>
+            <p><strong>Дата отправления:</strong> {{ tour.date_departure|date:"d.m.Y" }}</p>
+            <p><strong>Дата возвращения:</strong> {{ tour.date_return|date:"d.m.Y" }}</p>
+            <form action="/reserve/" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="tour_id" value="{{ tour.id }}">
+                <button type="submit" class="btn btn-primary btn-lg">Забронировать</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

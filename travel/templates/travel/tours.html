@@ -1,0 +1,152 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Туры{% endblock %}
+
+{% block content %}
+<style>
+    .filters-container {
+        position: absolute;
+        right: 20px;
+        top: 100px;
+        width: 200px;
+        z-index: 1000;
+    }
+
+    .filters {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .filters h4 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+
+    .filters .btn {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .section-title {
+        margin-top: 50px;
+        margin-bottom: 20px;
+    }
+    .card-img-top {
+        width: 100%;
+        height: 250px; /* Высота фиксирована */
+        object-fit: cover; /* Масштабирует изображение, сохраняя пропорции */
+    }
+</style>
+
+<!--фильтры-->
+<div class="filters-container">
+    <div class="filters">
+        <h4>Фильтры</h4>
+        <a href="?sort=asc" class="btn w-100 {% if sort_order == 'asc' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Цена: по возрастанию
+        </a>
+        <a href="?sort=desc" class="btn w-100 {% if sort_order == 'desc' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Цена: по убыванию
+        </a>
+    </div>
+</div>
+
+{% load custom_tags %}
+<h2 class="text-center mb-4">Всего доступно туров: {% total_tours %}</h2>
+
+<!--основной список туров-->
+<div class="container py-5">
+    <h1 class="text-center mb-4">Наши туры</h1>
+    <p class="text-center">Средняя цена тура: {{ average_price|default:"не указана" }} ₽</p>
+    <div class="row">
+        {% for tour in tours %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                {% if tour.image %}
+                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                {% else %}
+                <img src="https://via.placeholder.com/350x250" alt="Изображение недоступно" class="img-fluid">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ tour.name_tour }}</h5>
+                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                    <a href="{{ tour.get_absolute_url }}" class="btn btn-outline-primary">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!--пагинация-->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if tours.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ tours.previous_page_number }}{% if sort_order %}&sort={{ sort_order }}{% endif %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in tours.paginator.page_range %}
+            <li class="page-item {% if num == tours.number %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if sort_order %}&sort={{ sort_order }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if tours.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ tours.next_page_number }}{% if sort_order %}&sort={{ sort_order }}{% endif %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!--секция дешёвых туров-->
+    <h2 class="text-center section-title">Дешёвые туры</h2>
+    <p class="text-center">
+        Количество туров дешевле 20,000 рублей: {% count_cheap_tours 20000 %}
+    </p>
+
+    {% if cheap_tours %}
+    <div class="row">
+        {% for tour in cheap_tours %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                {% if tour.image %}
+                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                {% else %}
+                <img src="https://via.placeholder.com/350x200" class="card-img-top" alt="Нет изображения">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ tour.name_tour }}</h5>
+                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                    <a href="{% url 'tour-detail' tour.id %}" class="btn btn-outline-primary mt-auto">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-center">Нет дешёвых туров.</p>
+    {% endif %}
+</div>
+{% endblock %}

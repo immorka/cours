@@ -1,14 +1,12 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
+from django.urls import reverse
+from PIL import Image
 
 def validate_positive(value):
     if value <= 0:
         raise ValidationError('Значение должно быть больше нуля.')
-
-def validate_date_range(departure_date, return_date):
-    if return_date < departure_date:
-        raise ValidationError('Дата возвращения должна быть позже даты отправления.')
     
 class User(models.Model):
     name_user = models.CharField("Имя пользователя", max_length=255)
@@ -20,9 +18,15 @@ class User(models.Model):
     def __str__(self):
         return self.name_user
 
+class TourManager(models.Manager):
+    def hot_tours(self):
+        return self.filter(is_hot=True)
 
+    def cheap_tours(self, max_price):
+        return self.filter(price_tour__lte=max_price)
+    
 class Tour(models.Model):
-    name_tour = models.CharField("Имя пользователя", max_length=255)
+    name_tour = models.CharField("Название тура", max_length=255)
     discription_tour = models.TextField("Описание тура")
     price_tour = models.IntegerField("Цена тура", validators=[validate_positive])
     departure = models.CharField("Место отправления", max_length=255)
@@ -32,21 +36,36 @@ class Tour(models.Model):
     operator_tour = models.CharField("Туроператор", max_length=255)
     places_tour = models.IntegerField("Количество мест", validators=[validate_positive])
     history = HistoricalRecords()
-    def clean(self):
-        validate_date_range(self.date_departure, self.date_return)
-        if Tour.objects.filter(name_tour=self.name_tour).exclude(id=self.id).exists():
-            raise ValidationError('Тур с таким названием уже существует.')
+    is_hot = models.BooleanField(default=False)
+    image = models.ImageField(upload_to='tours/', blank=True, null=True)
+    objects = TourManager() 
+
+    class Meta:
+        ordering = ['date_departure']
 
     def __str__(self):
         return self.name_tour
-
+    
+    def get_absolute_url(self):
+            return reverse('tour-detail', args=[self.id])
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.image:
+            img_path = self.image.path
+            with Image.open(img_path) as img:
+                if img.width > 350 or img.height > 250:
+                    output_size = (350, 250)
+                    img.thumbnail(output_size)
+                    img.save(img_path)
 
 class Reservation(models.Model):
-    id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
-    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE)
+    id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name='reservations')
+    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reservations')
     date_reservation = models.DateField("Дата бронирования")
     status_pay = models.BooleanField("Статус оплаты")
-    payment_method = models.CharField("Метод оплаты", max_length=50)
+    PAYMENT_METHODS = [('CARD', 'Банковская карта'), ('CASH', 'Наличные'), ('ONLINE', 'Онлайн оплата(СБП)')]
+    payment_method = models.CharField("Метод оплаты", max_length=50, choices=PAYMENT_METHODS)
 
     def clean(self):
         if self.date_reservation < self.id_tour.date_departure:
@@ -57,8 +76,8 @@ class Reservation(models.Model):
 
 
 class Review(models.Model):
-    id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
-    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE)
+    id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name='reviews')
+    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reviews')
     text_review = models.TextField()
 
     def __str__(self):
@@ -83,7 +102,7 @@ class Favorite(models.Model):
 
 class Stock(models.Model):
     name_stock = models.CharField("Название акции", max_length=255)
-    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE)
+    id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='stocks')
     stock_value = models.IntegerField("Размер скидки", validators=[validate_positive])
     status_stock = models.BooleanField("Статус акции")
 

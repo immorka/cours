@@ -1,0 +1,52 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<div class="jumbotron text-center">
+    <h1>Добро пожаловать в Travel Explorer</h1>
+    <p>Откройте для себя удивительные путешествия!</p>
+    <a href="/tours/" class="btn btn-primary btn-lg">Искать туры</a>
+</div>
+
+<style>
+    .card-img-top {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+</style>
+<div class="container py-5">
+    <h2 class="text-center mb-4">Горячие туры</h2>
+    <div class="row">
+        {% for tour in hot_tours %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                {% if tour.image %}
+                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                {% else %}
+                <img src="https://via.placeholder.com/350x200" class="card-img-top" alt="Нет изображения">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ tour.name_tour }}</h5>
+                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                    <a href="{% url 'tour-detail' tour.id %}" class="btn btn-outline-primary">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% load custom_tags %}
+
+<h2 class="text-center mb-4">Популярные направления</h2>
+<ul class="list-group">
+    {% get_popular_destinations as popular_destinations %}
+    {% for destination in popular_destinations %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        {{ destination.destination }}
+        <span class="badge bg-primary rounded-pill">{{ destination.tour_count }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

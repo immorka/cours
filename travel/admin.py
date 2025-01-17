@@ -5,9 +5,24 @@ from .resources import UserResource, TourResource, ReservationResource, StockRes
 from django.utils import timezone
 from import_export.formats.base_formats import XLSX
 
+
 class ReservationInline(admin.TabularInline):
     model = Reservation
+    extra = 1 
+    fields = ('id_tour', 'date_reservation', 'payment_method', 'status_pay') 
+    readonly_fields = ('id_tour', 'date_reservation', 'payment_method', 'status_pay')
+
+class ReviewInline(admin.TabularInline):
+    model = Review
     extra = 1
+    fields = ('id_tour', 'text_review')
+    readonly_fields = ('id_tour', 'text_review')
+
+class FavoriteInline(admin.TabularInline):
+    model = Favorite
+    extra = 1
+    fields = ('id_tour',)
+    readonly_fields = ('id_tour',)
 
 @admin.register(User)
 class UserAdmin(ExportMixin, admin.ModelAdmin):
@@ -20,6 +35,7 @@ class UserAdmin(ExportMixin, admin.ModelAdmin):
         ("Роли и доступ", {"fields": ("role_user", "password_user")}),
     )
     readonly_fields = ("email_user",)
+    inlines = [ReservationInline, ReviewInline, FavoriteInline]
     verbose_name = "Пользователь"
     verbose_name_plural = "Пользователи"
 
@@ -32,7 +48,10 @@ class TourAdmin(ExportMixin, admin.ModelAdmin):
     search_fields = ("name_tour", "destination")
     actions = ["archive_old_tours"]
     inlines = [ReservationInline] 
-    fieldsets = (("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour")}),("Даты и места", {"fields": ("departure", "destination", "date_departure", "date_return")}),("Дополнительно", {"fields": ("price_tour", "places_tour")}),)
+    fieldsets = (
+        ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image")}),
+        ("Даты и места", {"fields": ("departure", "destination", "date_departure", "date_return")}),
+        ("Дополнительно", {"fields": ("price_tour", "places_tour", "is_hot")}),)
     verbose_name = "Тур"
     verbose_name_plural = "Туры"
 
