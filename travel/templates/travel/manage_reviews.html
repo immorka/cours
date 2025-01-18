@@ -1,0 +1,119 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Управление отзывами{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-4">Ваши отзывы</h1>
+    <div class="mb-4">
+        <h2>Добавить отзыв</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+    </div>
+    <div>
+        <h2>Ваши текущие отзывы</h2>
+        <ul class="list-group">
+            {% for review in reviews %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ review.id_tour.name_tour }}: {{ review.text_review }}</span>
+                <div>
+                    <button class="btn btn-secondary btn-sm edit-review-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editReviewModal"
+                            data-review-id="{{ review.id }}"
+                            data-review-text="{{ review.text_review }}">
+                        Редактировать
+                    </button>
+                    <button class="btn btn-danger btn-sm delete-review-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteReviewModal"
+                            data-review-id="{{ review.id }}">
+                        Удалить
+                    </button>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="modal fade" id="editReviewModal" tabindex="-1" aria-labelledby="editReviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form id="editReviewForm" method="post" action="{% url 'edit_review' %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title" id="editReviewModalLabel">Редактировать отзыв</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" name="review_id" id="reviewIdInput">
+                <div class="mb-3">
+                  <label for="reviewTextInput" class="form-label">Текст отзыва</label>
+                  <textarea class="form-control" name="review_text" id="reviewTextInput" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="deleteReviewModalLabel">Подтверждение удаления</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+              Вы уверены, что хотите удалить этот отзыв?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+              <form id="deleteReviewForm" method="post" action="{% url 'delete_review' %}">
+                {% csrf_token %}
+                <input type="hidden" name="review_id" id="deleteReviewIdInput">
+                <button type="submit" class="btn btn-danger">Удалить</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const editReviewBtns = document.querySelectorAll('.edit-review-btn');
+      const reviewIdInput = document.getElementById('reviewIdInput');
+      const reviewTextInput = document.getElementById('reviewTextInput');
+  
+      editReviewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reviewId = btn.getAttribute('data-review-id');
+          const reviewText = btn.getAttribute('data-review-text');
+  
+          reviewIdInput.value = reviewId;
+          reviewTextInput.value = reviewText;
+        });
+      });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const deleteReviewBtns = document.querySelectorAll('.delete-review-btn');
+      const deleteReviewIdInput = document.getElementById('deleteReviewIdInput');
+  
+      deleteReviewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const reviewId = btn.getAttribute('data-review-id');
+          deleteReviewIdInput.value = reviewId;
+        });
+      });
+    });
+  </script>
+{% endblock %}

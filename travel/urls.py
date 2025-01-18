@@ -8,6 +8,9 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.decorators import login_required
+
+
 router = DefaultRouter()
 router.register('users', UserViewSet)
 router.register('tours', TourViewSet)
@@ -27,8 +30,11 @@ urlpatterns = router.urls + [
     path('auth/', views.auth_view, name='auth'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
-    path('profile/', views.profile_view, name='profile'),
-
+    path('profile/', login_required(views.profile_view), name='profile'),
+    path('my-reviews/', views.manage_reviews, name='manage_reviews'),
+    path('my-reviews/delete/<int:review_id>/', views.delete_review, name='delete_review'),
+    path('edit_review/', views.edit_review_view, name='edit_review'),
+    path('delete_review/', views.delete_review, name='delete_review'),
 
 ]
 

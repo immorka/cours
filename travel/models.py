@@ -3,17 +3,40 @@ from django.core.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
 from django.urls import reverse
 from PIL import Image
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.base_user import BaseUserManager
 
 def validate_positive(value):
     if value <= 0:
         raise ValidationError('Значение должно быть больше нуля.')
     
-class User(models.Model):
-    name_user = models.CharField("Имя пользователя", max_length=255)
+class UserManager(BaseUserManager):
+    def create_user(self, email_user, password=None, **extra_fields):
+        if not email_user:
+            raise ValueError('Email обязателен для пользователя')
+        email_user = self.normalize_email(email_user)
+        user = self.model(email_user=email_user, **extra_fields)
+        user.set_password(password)  # Используем встроенный метод для хэширования пароля
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email_user, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email_user, password, **extra_fields)
+
+class User(AbstractBaseUser, PermissionsMixin):
     email_user = models.EmailField("Email пользователя", unique=True)
+    name_user = models.CharField("Имя пользователя", max_length=255)
     role_user = models.CharField("Роль пользователя", max_length=50)
-    password_user = models.CharField("Пароль пользователя", max_length=255)
     number_user = models.CharField("Номер телефона", max_length=15)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email_user'
+    REQUIRED_FIELDS = ['name_user']
 
     def __str__(self):
         return self.name_user
@@ -68,6 +91,9 @@ class Reservation(models.Model):
     payment_method = models.CharField("Метод оплаты", max_length=50, choices=PAYMENT_METHODS)
 
     def clean(self):
+        super().clean()
+        if not self.id_user or not self.id_tour:
+            raise ValidationError("Поля 'Пользователь' и 'Тур' обязательны для заполнения.")
         if self.date_reservation < self.id_tour.date_departure:
             raise ValidationError('Дата бронирования не может быть раньше даты отправления.')
 

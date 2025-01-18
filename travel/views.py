@@ -21,6 +21,10 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.http import HttpResponse
 from django.contrib import messages 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib.auth.decorators import login_required
+from .forms import ReviewForm
+from .models import Review
+from django.contrib.auth import authenticate, login
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -172,23 +176,14 @@ def tours(request):
         'average_price': average_price,
     })
 
-def tour_detail(request, id):
-    tour = get_object_or_404(Tour, id=id)
-    return render(request, 'travel/tour-detail.html', {'tour': tour})
-
 def auth_view(request):
     if request.method == 'POST':
         email = request.POST.get('email').strip().lower()
         password = request.POST.get('password')
 
-        try:
-            user = User.objects.get(email_user=email)
-        except User.DoesNotExist:
-            messages.error(request, "Неправильный email или пароль.")
-            return redirect('auth')
-
-        if check_password(password, user.password_user):
-            request.session['user_id'] = user.id
+        user = authenticate(request, username=email, password=password)
+        if user:
+            login(request, user)
             messages.success(request, f"Добро пожаловать, {user.name_user}!")
             return redirect('profile')
         else:
@@ -211,14 +206,13 @@ def register_view(request):
             messages.error(request, "Этот email уже зарегистрирован.")
             return redirect('register')
 
-        hashed_password = make_password(password)
-
-        User.objects.create(
+        user = User.objects.create_user(
             name_user=name,
             email_user=email,
-            password_user=hashed_password,
+            password=password,
             number_user=phone,
-            role_user="user"
+            role_user="user",
+            is_active=True  # Устанавливаем активность
         )
 
         messages.success(request, "Вы успешно зарегистрировались! Теперь вы можете войти.")
@@ -226,13 +220,9 @@ def register_view(request):
 
     return render(request, 'travel/register.html')
 
+@login_required
 def profile_view(request):
-    user_id = request.session.get('user_id')
-    if not user_id:
-        return redirect('auth')
-
-    user = User.objects.get(id=user_id)
-    return render(request, 'travel/profile.html', {'user': user})
+    return render(request, 'travel/profile.html', {'user': request.user})
 
 
 def logout_view(request):
@@ -245,3 +235,45 @@ def sorted_tours(request):
     """
     tours = Tour.objects.all().order_by('price_tour')
     return render(request, 'travel/sorted_tours.html', {'tours': tours})
+
+@login_required
+def manage_reviews(request):
+    reviews = Review.objects.filter(id_user=request.user)  # Используем request.user
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.id_user = request.user  # Связываем отзыв с текущим пользователем
+            review.save()
+            return redirect('manage_reviews')
+    else:
+        form = ReviewForm()
+    return render(request, 'travel/manage_reviews.html', {'reviews': reviews, 'form': form})
+
+@login_required
+def edit_review_view(request):
+    if request.method == 'POST':
+        review_id = request.POST.get('review_id')
+        review_text = request.POST.get('review_text')
+
+        review = get_object_or_404(Review, id=review_id, id_user=request.user)
+        review.text_review = review_text
+        review.save()
+
+        messages.success(request, "Отзыв успешно обновлен!")
+        return redirect('manage_reviews')
+
+    return redirect('manage_reviews')
+
+@login_required
+def delete_review(request):
+    if request.method == 'POST':
+        review_id = request.POST.get('review_id')
+        review = get_object_or_404(Review, id=review_id, id_user=request.user)
+        review.delete()
+        messages.success(request, "Отзыв успешно удален.")
+        return redirect('manage_reviews')
+
+def tour_detail(request, id):
+    tour = get_object_or_404(Tour, id=id)
+    return render(request, 'travel/tour-detail.html', {'tour': tour})

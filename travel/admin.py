@@ -4,6 +4,8 @@ from .models import User, Tour, Reservation, Review, TravelHistory, Favorite, St
 from .resources import UserResource, TourResource, ReservationResource, StockResource
 from django.utils import timezone
 from import_export.formats.base_formats import XLSX
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 
 
 class ReservationInline(admin.TabularInline):
@@ -24,20 +26,47 @@ class FavoriteInline(admin.TabularInline):
     fields = ('id_tour',)
     readonly_fields = ('id_tour',)
 
-@admin.register(User)
-class UserAdmin(ExportMixin, admin.ModelAdmin):
-    resource_class = UserResource
-    list_display = ("name_user", "email_user", "role_user")
-    search_fields = ("name_user", "email_user") 
-    list_filter = ("role_user",)
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ('email_user', 'name_user', 'number_user', 'role_user', 'is_staff', 'is_active')
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = User
+        fields = ('email_user', 'name_user', 'number_user', 'role_user', 'is_staff', 'is_active')
+
+class UserAdmin(BaseUserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = User
+
+    list_display = ('email_user', 'name_user', 'is_staff', 'is_active', 'role_user')
+    list_filter = ('is_staff', 'is_active', 'role_user')
+
     fieldsets = (
-        ("Личная информация", {"fields": ("name_user", "email_user", "number_user")}),
-        ("Роли и доступ", {"fields": ("role_user", "password_user")}),
+        (None, {'fields': ('email_user', 'password')}),
+        ('Персональная информация', {'fields': ('name_user', 'number_user', 'role_user')}),
+        ('Права доступа', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
     )
-    readonly_fields = ("email_user",)
-    inlines = [ReservationInline, ReviewInline, FavoriteInline]
-    verbose_name = "Пользователь"
-    verbose_name_plural = "Пользователи"
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email_user', 'password1', 'password2', 'name_user', 'number_user', 'role_user', 'is_staff', 'is_active')}
+        ),
+    )
+    search_fields = ('email_user', 'name_user')
+    ordering = ('email_user',)  # Убедитесь, что здесь используется существующее поле
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.set_password(form.cleaned_data["password1"])  # Хэшируем пароль
+        super().save_model(request, obj, form, change)
+
+admin.site.register(User, UserAdmin)
+
+
 
 @admin.register(Tour)
 class TourAdmin(ExportMixin, admin.ModelAdmin):
