@@ -18,13 +18,15 @@ from rest_framework.decorators import action
 from django.contrib.auth import logout
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.decorators import login_required
-from .forms import ReviewForm
+from .forms import ReviewForm, ReservationForm
 from .models import Review
 from django.contrib.auth import authenticate, login
+from django.core.exceptions import ValidationError
+from django.utils.timezone import now
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -212,7 +214,7 @@ def register_view(request):
             password=password,
             number_user=phone,
             role_user="user",
-            is_active=True  # Устанавливаем активность
+            is_active=True
         )
 
         messages.success(request, "Вы успешно зарегистрировались! Теперь вы можете войти.")
@@ -238,12 +240,12 @@ def sorted_tours(request):
 
 @login_required
 def manage_reviews(request):
-    reviews = Review.objects.filter(id_user=request.user)  # Используем request.user
+    reviews = Review.objects.filter(id_user=request.user)
     if request.method == 'POST':
         form = ReviewForm(request.POST)
         if form.is_valid():
             review = form.save(commit=False)
-            review.id_user = request.user  # Связываем отзыв с текущим пользователем
+            review.id_user = request.user
             review.save()
             return redirect('manage_reviews')
     else:
@@ -277,3 +279,45 @@ def delete_review(request):
 def tour_detail(request, id):
     tour = get_object_or_404(Tour, id=id)
     return render(request, 'travel/tour-detail.html', {'tour': tour})
+
+@login_required
+def reserve_tour(request):
+    if request.method == 'POST':
+        tour_id = request.POST.get('tour_id')
+        payment_method = request.POST.get('payment_method')
+
+        if not tour_id or not payment_method:
+            return JsonResponse({"error": "Данные формы неполные. Проверьте отправку."}, status=400)
+
+        tour = get_object_or_404(Tour, id=tour_id)
+
+        if tour.places_tour <= 0:
+            return JsonResponse({"error": "Нет доступных мест для этого тура."}, status=400)
+
+        if Reservation.objects.filter(id_user=request.user, id_tour=tour).exists():
+            return JsonResponse({"error": "Вы уже забронировали этот тур."}, status=400)
+
+        reservation = Reservation.objects.create(
+            id_user=request.user,
+            id_tour=tour,
+            date_reservation=now().date(),
+            payment_method=payment_method,
+            status_pay=False
+        )
+
+        tour.places_tour -= 1
+        tour.save()
+
+        return JsonResponse({"message": "Тур успешно забронирован!"}, status=200)
+
+    return JsonResponse({"error": "Некорректный запрос."}, status=400)
+
+@login_required
+def user_reservations(request):
+    reservations = Reservation.objects.select_related('id_tour').filter(id_user=request.user)
+    return render(request, 'travel/user_reservations.html', {'reservations': reservations})
+
+@login_required
+def travel_history(request):
+    history = TravelHistory.objects.prefetch_related('id_tour').filter(id_user=request.user)
+    return render(request, 'travel/travel_history.html', {'history': history})

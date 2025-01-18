@@ -11,18 +11,16 @@ def total_tours():
 
 @register.simple_tag
 def count_cheap_tours(max_price):
-    """
-    Возвращает количество туров, цена которых меньше указанного значения.
-    """
     return Tour.objects.filter(price_tour__lt=max_price).count()
 
 @register.simple_tag
 def get_popular_destinations(limit=3):
-    """
-    Возвращает топ популярных направлений (сортировка по количеству туров).
-    """
     return (
         Tour.objects.values('destination')
         .annotate(tour_count=Count('id'))
         .order_by('-tour_count')[:limit]
     )
+
+@register.filter
+def add_class(field, css_class):
+    return field.as_widget(attrs={"class": css_class})

@@ -5,6 +5,7 @@ from django.urls import reverse
 from PIL import Image
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
+from django.utils.timezone import now
 
 def validate_positive(value):
     if value <= 0:
@@ -16,7 +17,7 @@ class UserManager(BaseUserManager):
             raise ValueError('Email обязателен для пользователя')
         email_user = self.normalize_email(email_user)
         user = self.model(email_user=email_user, **extra_fields)
-        user.set_password(password)  # Используем встроенный метод для хэширования пароля
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
@@ -85,17 +86,13 @@ class Tour(models.Model):
 class Reservation(models.Model):
     id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name='reservations')
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reservations')
-    date_reservation = models.DateField("Дата бронирования")
-    status_pay = models.BooleanField("Статус оплаты")
+    date_reservation = models.DateField("Дата бронирования",default=now)
+    status_pay = models.BooleanField("Статус оплаты",default=False)
     PAYMENT_METHODS = [('CARD', 'Банковская карта'), ('CASH', 'Наличные'), ('ONLINE', 'Онлайн оплата(СБП)')]
     payment_method = models.CharField("Метод оплаты", max_length=50, choices=PAYMENT_METHODS)
 
     def clean(self):
         super().clean()
-        if not self.id_user or not self.id_tour:
-            raise ValidationError("Поля 'Пользователь' и 'Тур' обязательны для заполнения.")
-        if self.date_reservation < self.id_tour.date_departure:
-            raise ValidationError('Дата бронирования не может быть раньше даты отправления.')
 
     def __str__(self):
         return f"Бронирование {self.id} от {self.id_user.name_user}"
@@ -106,6 +103,10 @@ class Review(models.Model):
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reviews')
     text_review = models.TextField()
 
+    def clean(self):
+        if not self.text_review or self.text_review.strip() == "":
+            raise ValidationError({'text_review': 'Поле текста отзыва не может быть пустым.'})
+        
     def __str__(self):
         return f"Отзыв от {self.id_user.name_user} о {self.id_tour.name_tour}"
 

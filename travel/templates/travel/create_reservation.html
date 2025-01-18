@@ -1,0 +1,15 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Создать бронирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-4">Создать бронирование</h1>
+    <form id="reservationForm" method="post" action="{% url 'reserve_tour' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Забронировать</button>
+    </form>
+</div>
+{% endblock %}
+{% endblock %}

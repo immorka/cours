@@ -2,10 +2,10 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from .views import (
     UserViewSet, TourViewSet, ReservationViewSet,
-    ReviewViewSet, TravelHistoryViewSet, FavoriteViewSet, StockViewSet, ComplexTourQueryView, ComplexReservationQueryView, FilterByStatusView
+    ReviewViewSet, TravelHistoryViewSet, FavoriteViewSet, StockViewSet, ComplexTourQueryView, ComplexReservationQueryView, FilterByStatusView, reserve_tour
 )
 from rest_framework.routers import DefaultRouter
-from django.urls import path
+from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.decorators import login_required
@@ -35,8 +35,17 @@ urlpatterns = router.urls + [
     path('my-reviews/delete/<int:review_id>/', views.delete_review, name='delete_review'),
     path('edit_review/', views.edit_review_view, name='edit_review'),
     path('delete_review/', views.delete_review, name='delete_review'),
+    path('reserve/', reserve_tour, name='reserve_tour'),
+    path('profile/reservations/', views.user_reservations, name='user_reservations'),
+    path('profile/history/', views.travel_history, name='travel_history'),
 
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ]

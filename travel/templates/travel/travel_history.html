@@ -1,0 +1,32 @@
+{% extends 'travel/base.html' %}
+
+
+{% block content %}
+<h2 class="text-center">История путешествий</h2>
+<table class="table mt-4">
+    <thead>
+        <tr>
+            <th>Название тура</th>
+            <th>Описание тура</th>
+            <th>Цена</th>
+            <th>Дата отправления</th>
+            <th>Дата возвращения</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in history %}
+        <tr>
+            <td>{{ record.id_tour.name_tour }}</td>
+            <td>{{ record.id_tour.discription_tour }}</td>
+            <td>{{ record.id_tour.price_tour }}</td>
+            <td>{{ record.id_tour.date_departure|date:"d.m.Y" }}</td>
+            <td>{{ record.id_tour.date_return|date:"d.m.Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center">Вы ещё не совершали путешествий.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

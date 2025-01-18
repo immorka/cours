@@ -57,11 +57,11 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
     search_fields = ('email_user', 'name_user')
-    ordering = ('email_user',)  # Убедитесь, что здесь используется существующее поле
-    
+    ordering = ('email_user',)
+
     def save_model(self, request, obj, form, change):
         if not change:
-            obj.set_password(form.cleaned_data["password1"])  # Хэшируем пароль
+            obj.set_password(form.cleaned_data["password1"])
         super().save_model(request, obj, form, change)
 
 admin.site.register(User, UserAdmin)
