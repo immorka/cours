@@ -22,13 +22,21 @@
             {% endif %}
         </div>
         <div class="col-md-6">
-            <h3>Цена: €{{ tour.price_tour }}</h3>
+            <h3>Цена: {{ tour.price_tour }} ₽</h3>
             <p class="description">{{ tour.discription_tour }}</p>
             <p><strong>Место отправления:</strong> {{ tour.departure }}</p>
             <p><strong>Место назначения:</strong> {{ tour.destination }}</p>
             <p><strong>Дата отправления:</strong> {{ tour.date_departure|date:"d.m.Y" }}</p>
             <p><strong>Дата возвращения:</strong> {{ tour.date_return|date:"d.m.Y" }}</p>
             <p><strong>Доступные места:</strong> {{ tour.places_tour }}</p>
+            <p>
+                <strong>Видеообзор тура:</strong>
+                {% if tour.video_url %}
+                    <a href="{{ tour.video_url }}" target="_blank" rel="noopener noreferrer">Ссылка на обзор</a>
+                {% else %}
+                    Видеообзор недоступен
+                {% endif %}
+            </p>
             <form action="/reserve/" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="tour_id" value="{{ tour.id }}">

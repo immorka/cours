@@ -232,9 +232,6 @@ def logout_view(request):
     return redirect('auth')
 
 def sorted_tours(request):
-    """
-    Сортировка туров по цене.
-    """
     tours = Tour.objects.all().order_by('price_tour')
     return render(request, 'travel/sorted_tours.html', {'tours': tours})
 

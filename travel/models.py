@@ -63,7 +63,12 @@ class Tour(models.Model):
     is_hot = models.BooleanField(default=False)
     image = models.ImageField(upload_to='tours/', blank=True, null=True)
     objects = TourManager() 
-
+    video_url = models.URLField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Ссылка на видеообзор"
+    )
     class Meta:
         ordering = ['date_departure']
 
@@ -90,7 +95,12 @@ class Reservation(models.Model):
     status_pay = models.BooleanField("Статус оплаты",default=False)
     PAYMENT_METHODS = [('CARD', 'Банковская карта'), ('CASH', 'Наличные'), ('ONLINE', 'Онлайн оплата(СБП)')]
     payment_method = models.CharField("Метод оплаты", max_length=50, choices=PAYMENT_METHODS)
-
+    document = models.FileField(
+        upload_to='reservation_documents/',
+        blank=True,
+        null=True,
+        verbose_name="Документ бронирования"
+    )
     def clean(self):
         super().clean()
 

@@ -6,7 +6,13 @@ from django.utils import timezone
 from import_export.formats.base_formats import XLSX
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-
+import io
+from django.http import FileResponse
+from reportlab.pdfgen import canvas
+from django.utils.translation import gettext_lazy as _
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.pagesizes import A4
 
 class ReservationInline(admin.TabularInline):
     model = Reservation
@@ -72,13 +78,13 @@ admin.site.register(User, UserAdmin)
 class TourAdmin(ExportMixin, admin.ModelAdmin):
     resource_class = TourResource
     formats = [XLSX]
-    list_display = ("name_tour", "price_tour", "departure", "destination", "date_departure", "date_return","is_archived")
+    list_display = ("name_tour", "price_tour", "departure", "destination", "date_departure", "date_return","is_archived","video_url")
     list_filter = ("date_departure", "date_return", "operator_tour")
     search_fields = ("name_tour", "destination")
     actions = ["archive_old_tours"]
     inlines = [ReservationInline] 
     fieldsets = (
-        ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image")}),
+        ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image","video_url")}),
         ("Даты и места", {"fields": ("departure", "destination", "date_departure", "date_return")}),
         ("Дополнительно", {"fields": ("price_tour", "places_tour", "is_hot")}),)
     verbose_name = "Тур"
@@ -99,13 +105,32 @@ class TourAdmin(ExportMixin, admin.ModelAdmin):
     archive_old_tours.short_description = "Архивировать старые туры"
 
 @admin.register(Reservation)
-class ReservationAdmin(ExportMixin, admin.ModelAdmin):
-    resource_class = ReservationResource
+class ReservationAdmin(admin.ModelAdmin):
     list_display = ("id", "id_user", "id_tour", "date_reservation", "status_pay", "payment_method")
     list_filter = ("status_pay", "payment_method")
     search_fields = ("id_user__name_user", "id_tour__name_tour")
     verbose_name = "Бронирование"
     verbose_name_plural = "Бронирования"
+
+    actions = ["generate_pdf_report"]
+
+    def generate_pdf_report(self, request, queryset):
+        pdfmetrics.registerFont(TTFont('FreeSerif', 'static/fonts/FreeSerif.ttf'))
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=A4)
+        p.setFont('FreeSerif', 12)
+        p.drawString(100, 800, "Отчет о бронированиях")
+        y = 750
+        for reservation in queryset:
+            text = f"Бронирование ID: {reservation.id}, Тур: {reservation.id_tour}, Пользователь: {reservation.id_user}, Оплата: {'Да' if reservation.status_pay else 'Нет'}"
+            p.drawString(50, y, text)
+            y -= 20
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        return FileResponse(buffer, as_attachment=True, filename='reservation_report.pdf')
+
+    generate_pdf_report.short_description = _("Сгенерировать PDF отчет")
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
