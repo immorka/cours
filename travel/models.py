@@ -39,8 +39,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email_user'
     REQUIRED_FIELDS = ['name_user']
 
+    class Meta:
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
+
     def __str__(self):
         return self.name_user
+
 
 class TourManager(models.Manager):
     def hot_tours(self):
@@ -71,6 +76,8 @@ class Tour(models.Model):
     )
     class Meta:
         ordering = ['date_departure']
+        verbose_name = "Тур"
+        verbose_name_plural = "Туры"
 
     def __str__(self):
         return self.name_tour
@@ -104,6 +111,10 @@ class Reservation(models.Model):
     def clean(self):
         super().clean()
 
+    class Meta:
+        verbose_name = "Бронирование"
+        verbose_name_plural = "Бронирования"
+
     def __str__(self):
         return f"Бронирование {self.id} от {self.id_user.name_user}"
 
@@ -117,6 +128,10 @@ class Review(models.Model):
         if not self.text_review or self.text_review.strip() == "":
             raise ValidationError({'text_review': 'Поле текста отзыва не может быть пустым.'})
         
+    class Meta:
+        verbose_name = "Отзыв"
+        verbose_name_plural = "Отзывы"
+
     def __str__(self):
         return f"Отзыв от {self.id_user.name_user} о {self.id_tour.name_tour}"
 
@@ -125,6 +140,10 @@ class TravelHistory(models.Model):
     id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE)
 
+    class Meta:
+        verbose_name = "История путешествий"
+        verbose_name_plural = "Истории путешествий"
+
     def __str__(self):
         return f"История: {self.id_user.name_user} - {self.id_tour.name_tour}"
 
@@ -132,6 +151,10 @@ class TravelHistory(models.Model):
 class Favorite(models.Model):
     id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE)
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = "Избранное"
+        verbose_name_plural = "Избранные"
 
     def __str__(self):
         return f"Избранное: {self.id_user.name_user} - {self.id_tour.name_tour}"
@@ -142,6 +165,10 @@ class Stock(models.Model):
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='stocks')
     stock_value = models.IntegerField("Размер скидки", validators=[validate_positive])
     status_stock = models.BooleanField("Статус акции")
+
+    class Meta:
+        verbose_name = "Акция"
+        verbose_name_plural = "Акции"
 
     def __str__(self):
         return self.name_stock

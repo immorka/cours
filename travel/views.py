@@ -169,7 +169,10 @@ def tours(request):
     hot_tours = Tour.objects.hot_tours()
     cheap_tours = Tour.objects.cheap_tours(20000)
     average_price = Tour.objects.all().aggregate(Avg('price_tour'))['price_tour__avg']
-
+    average_price = Tour.objects.all().aggregate(Avg('price_tour'))['price_tour__avg']
+    if average_price:
+        average_price = round(average_price)
+        
     return render(request, 'travel/tours.html', {
         'tours': tours,
         'hot_tours': hot_tours,
