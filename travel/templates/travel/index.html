@@ -16,27 +16,33 @@
         object-fit: cover;
     }
 </style>
-<div class="container py-5">
-    <h2 class="text-center mb-4">Горячие туры</h2>
-    <div class="row">
-        {% for tour in hot_tours %}
-        <div class="col-md-4 mb-3">
-            <div class="card h-100">
-                {% if tour.image %}
-                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
-                {% else %}
-                <img src="https://via.placeholder.com/350x200" class="card-img-top" alt="Нет изображения">
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ tour.name_tour }}</h5>
-                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
-                    <a href="{% url 'tour-detail' tour.id %}" class="btn btn-outline-primary">Подробнее</a>
+
+<div class="container mt-5">
+    <h2>Горячие туры</h2>
+    {% if has_hot_tours %}
+        <div class="row">
+            {% for tour in hot_tours %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    {% if tour.image %}
+                    <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                    {% else %}
+                    <img src="https://via.placeholder.com/350x250" alt="Изображение недоступно" class="img-fluid">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ tour.name_tour }}</h5>
+                        <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                        <a href="{{ tour.get_absolute_url }}" class="btn btn-outline-primary">Подробнее</a>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
+    {% else %}
+        <p>На данный момент горячих туров нет.</p>
+    {% endif %}
 </div>
+
 {% load custom_tags %}
 
 <h2 class="text-center mb-4">Популярные направления</h2>
@@ -49,4 +55,15 @@
     </li>
     {% endfor %}
 </ul>
+<div class="container mt-5">
+    <h2>Информация о туроператорах</h2>
+    <ul class="list-group">
+        {% for operator in operator_data %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="{% url 'operator_tours' operator.operator_tour %}">{{ operator.operator_tour }}</a>
+                <span class="badge bg-primary rounded-pill">{{ operator.tour_count }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
 {% endblock %}

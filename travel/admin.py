@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.pagesizes import A4
+from django.db import models
 
 class ReservationInline(admin.TabularInline):
     model = Reservation
@@ -78,15 +79,16 @@ admin.site.register(User, UserAdmin)
 class TourAdmin(ExportMixin, admin.ModelAdmin):
     resource_class = TourResource
     formats = [XLSX]
-    list_display = ("name_tour", "price_tour", "departure", "destination", "date_departure", "date_return","is_archived","video_url")
+    list_display = ("name_tour", "price_tour", "departure", "destination", "date_departure", "date_return", "is_archived", "video_url")
     list_filter = ("date_departure", "date_return", "operator_tour")
     search_fields = ("name_tour", "destination")
-    actions = ["archive_old_tours"]
-    inlines = [ReservationInline] 
+    actions = ["archive_old_tours", "increase_price", "delete_selected_tours"]
+    inlines = [ReservationInline]
     fieldsets = (
-        ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image","video_url")}),
+        ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image", "video_url")}),
         ("Даты и места", {"fields": ("departure", "destination", "date_departure", "date_return")}),
-        ("Дополнительно", {"fields": ("price_tour", "places_tour", "is_hot")}),)
+        ("Дополнительно", {"fields": ("price_tour", "places_tour", "is_hot")}),
+    )
     verbose_name = "Тур"
     verbose_name_plural = "Туры"
 
@@ -97,12 +99,29 @@ class TourAdmin(ExportMixin, admin.ModelAdmin):
     is_archived.short_description = "Заархивирован"
 
     def archive_old_tours(self, request, queryset):
+        """
+        Архивирование старых туров.
+        """
         today = timezone.now().date()
         archived = queryset.filter(date_return__lt=today)
         count = archived.update(operator_tour="Архив")
         self.message_user(request, f"Архивировано {count} старых туров.")
 
     archive_old_tours.short_description = "Архивировать старые туры"
+
+    @admin.action(description="Увеличить цены на 10%%")
+    def increase_price(self, request, queryset):
+        count = queryset.count()
+        queryset.update(price_tour=models.F("price_tour") * 1.10)
+        self.message_user(request, f"Цены на {count} туров увеличены на 10%.")
+
+
+    @admin.action(description="Удалить выбранные туры")
+    def delete_selected_tours(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Удалено {count} туров.")
+
 
 @admin.register(Reservation)
 class ReservationAdmin(admin.ModelAdmin):
@@ -134,7 +153,7 @@ class ReservationAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ("id", "id_user", "id_tour", "text_review")
+    list_display = ("id", "id_user", "id_tour", "text_review",'created_at')
     search_fields = ("id_user__name_user", "id_tour__name_tour")
     verbose_name = "Отзыв"
     verbose_name_plural = "Отзывы"

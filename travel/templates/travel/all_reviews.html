@@ -1,0 +1,33 @@
+{% extends 'travel/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Туры от оператора "{{ tour.operator_tour }}"</h1>
+    <p>{{ tour.discription_tour }}</p>
+    {% if tour.image %}
+        <img src="{{ tour.image.url }}" alt="{{ tour.name_tour }}" class="img-fluid mb-3">
+    {% else %}
+        <p>Изображение недоступно.</p>
+    {% endif %}
+
+    <h2>Отзывы ({{ total_reviews }})</h2>
+    {% if reviews %}
+        <ul class="list-group">
+            {% for review in reviews %}
+                <li class="list-group-item">
+                    <h5>{{ review.id_user.name_user }}</h5>
+                    <p class="mb-1">{{ review.text_review }}</p>
+                    {% if review.image %}
+                        <div class="mt-2">
+                            <img src="{{ review.image.url }}" alt="Изображение отзыва" style="max-width: 200px; height: auto;">
+                        </div>
+                    {% endif %}
+                    <small class="text-muted">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
+    {% endif %}
+</div>
+{% endblock %}

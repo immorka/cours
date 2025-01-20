@@ -1,0 +1,25 @@
+{% extends 'travel/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Туры от оператора "{{ operator_name }}"</h1>
+    <div class="row">
+        {% for tour in tours %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                {% if tour.image %}
+                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                {% else %}
+                <img src="https://via.placeholder.com/350x250" alt="Изображение недоступно" class="img-fluid">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ tour.name_tour }}</h5>
+                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                    <a href="{{ tour.get_absolute_url }}" class="btn btn-outline-primary">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

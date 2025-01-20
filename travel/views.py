@@ -16,7 +16,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .filters import TourFilter
 from rest_framework.decorators import action
 from django.contrib.auth import logout
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_list_or_404
 from django.contrib.auth.hashers import make_password, check_password
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages 
@@ -27,6 +27,9 @@ from .models import Review
 from django.contrib.auth import authenticate, login
 from django.core.exceptions import ValidationError
 from django.utils.timezone import now
+from django.db import models
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -147,14 +150,41 @@ class StockViewSet(ModelViewSet):
 
 def index(request):
     hot_tours = Tour.objects.hot_tours()
-    return render(request, 'travel/index.html', {'hot_tours': hot_tours})
+
+    has_hot_tours = hot_tours.exists()
+
+    operator_data = Tour.objects.values('operator_tour').annotate(tour_count=models.Count('operator_tour'))
+
+    return render(request, 'travel/index.html', {
+        'hot_tours': hot_tours,
+        'operator_data': operator_data,
+        'has_hot_tours': has_hot_tours,
+
+    })
 
 def tours(request):
     sort_order = request.GET.get('sort', 'asc')
+    excluded_operator = request.GET.get('excluded_operator', None)
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    search_query = request.GET.get('search_query', '')
+
     if sort_order == 'desc':
         tours_list = Tour.objects.all().order_by('-price_tour')
     else:
         tours_list = Tour.objects.all().order_by('price_tour')
+
+    if min_price:
+        tours_list = tours_list.filter(price_tour__gte=min_price)
+    if max_price:
+        tours_list = tours_list.filter(price_tour__lte=max_price)
+
+    if excluded_operator:
+        tours_list = tours_list.exclude(operator_tour=excluded_operator)
+
+    if search_query:
+        tours_list = tours_list.filter(name_tour__icontains=search_query)
+
 
     paginator = Paginator(tours_list, 6)
     page = request.GET.get('page')
@@ -165,6 +195,8 @@ def tours(request):
         tours = paginator.page(1)
     except EmptyPage:
         tours = paginator.page(paginator.num_pages)
+
+    operators = Tour.objects.values_list('operator_tour', flat=True).distinct()
 
     hot_tours = Tour.objects.hot_tours()
     cheap_tours = Tour.objects.cheap_tours(20000)
@@ -179,6 +211,9 @@ def tours(request):
         'cheap_tours': cheap_tours,
         'sort_order': sort_order,
         'average_price': average_price,
+        'operators': operators,
+        'excluded_operator': excluded_operator,
+
     })
 
 def auth_view(request):
@@ -242,12 +277,15 @@ def sorted_tours(request):
 def manage_reviews(request):
     reviews = Review.objects.filter(id_user=request.user)
     if request.method == 'POST':
-        form = ReviewForm(request.POST)
+        form = ReviewForm(request.POST, request.FILES)
         if form.is_valid():
-            review = form.save(commit=False)
-            review.id_user = request.user
-            review.save()
-            return redirect('manage_reviews')
+            text_review = form.cleaned_data.get('text_review')
+
+            if "запрещённое слово" in text_review.lower():
+                form.add_error('text_review', 'Ваш отзыв содержит запрещённые слова.')
+            else:
+                form.save(user=request.user)
+                return HttpResponseRedirect(reverse('manage_reviews'))
     else:
         form = ReviewForm()
     return render(request, 'travel/manage_reviews.html', {'reviews': reviews, 'form': form})
@@ -257,12 +295,20 @@ def edit_review_view(request):
     if request.method == 'POST':
         review_id = request.POST.get('review_id')
         review_text = request.POST.get('review_text')
+        review_image = request.FILES.get('review_image')
+        clear_image = request.POST.get('clear_image')
 
         review = get_object_or_404(Review, id=review_id, id_user=request.user)
         review.text_review = review_text
-        review.save()
 
-        messages.success(request, "Отзыв успешно обновлен!")
+        if clear_image and review.image:
+            review.image.delete(save=False)
+            review.image = None
+        elif review_image:
+            review.image = review_image
+
+        review.save()
+        messages.success(request, "Отзыв успешно обновлён!")
         return redirect('manage_reviews')
 
     return redirect('manage_reviews')
@@ -278,7 +324,17 @@ def delete_review(request):
 
 def tour_detail(request, id):
     tour = get_object_or_404(Tour, id=id)
-    return render(request, 'travel/tour-detail.html', {'tour': tour})
+
+    latest_reviews = Review.objects.filter(id_tour=tour).order_by('-created_at')[:3]
+    
+    operator_data = Tour.objects.values('operator_tour').annotate(tour_count=models.Count('operator_tour'))
+
+    return render(request, 'travel/tour-detail.html', {
+        'tour': tour,
+        'latest_reviews': latest_reviews,
+        'operator_data': operator_data,
+
+    })
 
 @login_required
 def reserve_tour(request):
@@ -308,7 +364,7 @@ def reserve_tour(request):
         tour.places_tour -= 1
         tour.save()
 
-        return JsonResponse({"message": "Тур успешно забронирован!"}, status=200)
+        return HttpResponseRedirect(reverse('user_reservations'))
 
     return JsonResponse({"error": "Некорректный запрос."}, status=400)
 
@@ -321,3 +377,25 @@ def user_reservations(request):
 def travel_history(request):
     history = TravelHistory.objects.prefetch_related('id_tour').filter(id_user=request.user)
     return render(request, 'travel/travel_history.html', {'history': history})
+
+
+def all_reviews(request, id):
+    tour = get_object_or_404(Tour, id=id)
+
+    reviews = Review.objects.filter(id_tour=tour).order_by('-created_at')
+    total_reviews = reviews.count()
+
+    return render(request, 'travel/all_reviews.html', {
+        'tour': tour,
+        'reviews': reviews,
+        'total_reviews': total_reviews,
+
+    })
+
+def operator_tours(request, operator_name):
+    tours = get_list_or_404(Tour, operator_tour=operator_name)
+
+    return render(request, 'travel/operator_tours.html', {
+        'operator_name': operator_name,
+        'tours': tours,
+    })

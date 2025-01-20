@@ -47,6 +47,26 @@
         </div>
     </div>
 </div>
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Последние отзывы</h2>
+        <a href="{% url 'all_reviews' tour.id %}" class="btn btn-outline-primary">Все отзывы</a>
+    </div>
+    
+    {% if latest_reviews %}
+        <ul class="list-group">
+            {% for review in latest_reviews %}
+                <li class="list-group-item">
+                    <h5>{{ review.id_user.name_user }}</h5>
+                    <p class="mb-1">{{ review.text_review }}</p>
+                    <small class="text-muted">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
+    {% endif %}
+</div>
 <!-- Модальное окно -->
 <div class="modal fade" id="reserveModal" tabindex="-1" aria-labelledby="reserveModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -96,10 +116,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const reserveForm = document.getElementById('reserveForm');
-        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-    
+        
         if (reserveForm) {
-            console.log("Добавление обработчика формы");
             reserveForm.addEventListener('submit', async function (event) {
                 event.preventDefault();
     
@@ -118,13 +136,16 @@
                         }
                     });
     
-                    const result = await response.json();
-    
-                    if (response.ok) {
-                        document.getElementById('successMessage').textContent = result.message || "Тур успешно забронирован!";
-                        successModal.show();
+                    // Обрабатываем редирект
+                    if (response.redirected) {
+                        window.location.href = response.url; // Переход на целевую страницу
                     } else {
-                        alert(result.error || "Ошибка бронирования.");
+                        const result = await response.json();
+                        if (response.ok) {
+                            alert(result.message || "Тур успешно забронирован!");
+                        } else {
+                            alert(result.error || "Ошибка бронирования.");
+                        }
                     }
                 } catch (error) {
                     console.error("Ошибка при отправке данных:", error);
@@ -133,7 +154,7 @@
                     submitButton.disabled = false;
                     submitButton.textContent = 'Забронировать';
                 }
-            }, { once: true });
+            });
         } else {
             console.error("Форма бронирования не найдена!");
         }

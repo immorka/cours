@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from .views import (
     UserViewSet, TourViewSet, ReservationViewSet,
-    ReviewViewSet, TravelHistoryViewSet, FavoriteViewSet, StockViewSet, ComplexTourQueryView, ComplexReservationQueryView, FilterByStatusView, reserve_tour
+    ReviewViewSet, TravelHistoryViewSet, FavoriteViewSet, StockViewSet, ComplexTourQueryView, ComplexReservationQueryView, FilterByStatusView, reserve_tour, all_reviews, operator_tours
 )
 from rest_framework.routers import DefaultRouter
 from django.urls import path,include
@@ -33,11 +33,13 @@ urlpatterns = router.urls + [
     path('profile/', login_required(views.profile_view), name='profile'),
     path('my-reviews/', views.manage_reviews, name='manage_reviews'),
     path('my-reviews/delete/<int:review_id>/', views.delete_review, name='delete_review'),
-    path('edit_review/', views.edit_review_view, name='edit_review'),
+    path('edit-review/', views.edit_review_view, name='edit_review_view'),  # Изменено имя
     path('delete_review/', views.delete_review, name='delete_review'),
     path('reserve/', reserve_tour, name='reserve_tour'),
     path('profile/reservations/', views.user_reservations, name='user_reservations'),
     path('profile/history/', views.travel_history, name='travel_history'),
+    path('tour/<int:id>/reviews/', all_reviews, name='all_reviews'),
+    path('operator/<str:operator_name>/', operator_tours, name='operator_tours'),
 
 ]
 

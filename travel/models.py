@@ -34,6 +34,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    # Добавлено ManyToManyField через модель Favorite
+    favorites = models.ManyToManyField(
+        'Tour',
+        through='Favorite',
+        related_name='favorited_by',
+        verbose_name="Избранные туры"
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email_user'
@@ -122,7 +130,9 @@ class Reservation(models.Model):
 class Review(models.Model):
     id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name='reviews')
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reviews')
-    text_review = models.TextField()
+    text_review = models.TextField(max_length=500)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)  # Новое поле
+    image = models.ImageField(upload_to='reviews/', blank=True, null=True, verbose_name="Изображение")  # Поле для загрузки файла
 
     def clean(self):
         if not self.text_review or self.text_review.strip() == "":
