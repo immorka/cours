@@ -53,20 +53,10 @@ class ReviewForm(forms.ModelForm):
 
     def clean_text_review(self):
         text_review = self.cleaned_data.get('text_review')
-        if not text_review or text_review.strip() == "":
-            raise forms.ValidationError("Отзыв не может быть пустым.")
+        if "запрещённое слово" in text_review.lower():
+            raise forms.ValidationError("Ваш отзыв содержит запрещённые слова.")
         return text_review
 
-    def save(self, commit=True, user=None):
-        review = super().save(commit=False)
-
-        if user:
-            review.id_user = user
-
-        if commit:
-            review.save()
-
-        return review
        
 class CustomUserCreationForm(UserCreationForm):
     class Meta:

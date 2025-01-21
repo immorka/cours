@@ -1,115 +1,117 @@
 {% extends 'travel/base.html' %}
+{% load tour_filters %}
 
 {% block title %}Детали тура{% endblock %}
 
 {% block content %}
-<style>
-    .card-text, .description {
-        word-wrap: break-word; /* Перенос длинных слов */
-        word-break: break-word; /* Для длинных слов без пробелов */
-        white-space: normal; /* Убедимся, что текст переносится */
-    }
-</style>
 
 <div class="container py-5">
-    <h1 class="mb-4">{{ tour.name_tour }}</h1>
-    <div class="row">
-        <div class="col-md-6">
-            {% if tour.image %}
-            <img src="{{ tour.image.url }}" class="img-fluid rounded" alt="{{ tour.name_tour }}">
-            {% else %}
-            <img src="https://via.placeholder.com/600x400" class="img-fluid rounded" alt="Изображение недоступно">
-            {% endif %}
-        </div>
-        <div class="col-md-6">
-            <h3>Цена: {{ tour.price_tour }} ₽</h3>
-            <p class="description">{{ tour.discription_tour }}</p>
-            <p><strong>Место отправления:</strong> {{ tour.departure }}</p>
-            <p><strong>Место назначения:</strong> {{ tour.destination }}</p>
-            <p><strong>Дата отправления:</strong> {{ tour.date_departure|date:"d.m.Y" }}</p>
-            <p><strong>Дата возвращения:</strong> {{ tour.date_return|date:"d.m.Y" }}</p>
-            <p><strong>Доступные места:</strong> {{ tour.places_tour }}</p>
-            <p>
-                <strong>Видеообзор тура:</strong>
-                {% if tour.video_url %}
-                    <a href="{{ tour.video_url }}" target="_blank" rel="noopener noreferrer">Ссылка на обзор</a>
+    <h1 class="text-center mb-4">{{ tour.name_tour }}</h1>
+    <div class="row align-items-center">
+        <!-- Блок с изображением -->
+        <div class="col-md-6 text-center"> 
+            <div class="position-relative">
+                {% if tour.image %}
+                <img src="{{ tour.image.url }}" class="rounded tour-image" alt="{{ tour.name_tour }}">
                 {% else %}
-                    Видеообзор недоступен
+                <img src="https://via.placeholder.com/600x400" class="rounded tour-image" alt="Изображение недоступно">
                 {% endif %}
-            </p>
-            <form action="/reserve/" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="tour_id" value="{{ tour.id }}">
-                <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#reserveModal">
+
+                <a href="{% url 'add_to_favorite' tour.id %}" class="favorite-toggle">
+                    <i class="fa {% if is_favorite %}fa-heart text-danger{% else %}fa-heart-o{% endif %}"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Блок с описанием -->
+        <div class="col-md-6">
+            <div class="tour-details">
+                <!-- Основная информация -->
+                <h4 class="text-success mb-3">Цена: {{ tour.price_tour }} ₽</h4>
+                <p class="description mb-4">{{ tour.discription_tour|slice_0_before_program }}</p>
+                
+                <!-- Программа тура -->
+                <h5 class="text-light mb-3">Программа тура:</h5>
+                <ul class="list-group mb-4">
+                    {% for item in tour.discription_tour|program_list %}
+                    <li class="list-group-item">
+                        {{ item }}
+                    </li>
+                    {% endfor %}
+                </ul>
+        
+                <!-- Дополнительная информация -->
+                <ul class="list-group mb-4">
+                    <li class="list-group-item"><strong>Место отправления:</strong> {{ tour.departure }}</li>
+                    <li class="list-group-item"><strong>Место назначения:</strong> {{ tour.destination }}</li>
+                    <li class="list-group-item"><strong>Дата отправления:</strong> {{ tour.date_departure }}</li>
+                    <li class="list-group-item"><strong>Дата возвращения:</strong> {{ tour.date_return }}</li>
+                    <li class="list-group-item"><strong>Доступные места:</strong> {{ tour.places_tour }}</li>
+                    <li class="list-group-item">
+                        <strong>Видеообзор тура:</strong>
+                        <a href="{{ tour.video_url }}" target="_blank" class="text-primary">Ссылка на обзор</a>
+                    </li>
+                </ul>
+        
+                <!-- Кнопка бронирования -->
+                <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#reserveModal">
                     Забронировать
                 </button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Последние отзывы</h2>
-        <a href="{% url 'all_reviews' tour.id %}" class="btn btn-outline-primary">Все отзывы</a>
+        <h2 class="text-light">Последние отзывы</h2>
+        <a href="{% url 'all_reviews' tour.id %}" class="btn btn-outline-secondary">Все отзывы</a>
     </div>
-    
+
     {% if latest_reviews %}
-        <ul class="list-group">
+        <div class="card bg-dark p-3">
             {% for review in latest_reviews %}
-                <li class="list-group-item">
-                    <h5>{{ review.id_user.name_user }}</h5>
-                    <p class="mb-1">{{ review.text_review }}</p>
-                    <small class="text-muted">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
-                </li>
+            <div class="review-item border-bottom border-secondary pb-3 mb-3">
+                <h5 class="text-primary mb-1">Отзыв от: {{ review.id_user.name_user }}</h5>
+                <p class="mb-2 text-light">{{ review.text_review }}</p>
+                <small class="text-danger">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
     {% else %}
-        <p>Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
+        <p class="text-light">Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
     {% endif %}
 </div>
+
 <!-- Модальное окно -->
 <div class="modal fade" id="reserveModal" tabindex="-1" aria-labelledby="reserveModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
             <form id="reserveForm" action="{% url 'reserve_tour' %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="tour_id" value="{{ tour.id }}">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="reserveModalLabel">Подтверждение бронирования</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
                 <div class="modal-body">
                     <p><strong>Название тура:</strong> {{ tour.name_tour }}</p>
                     <p><strong>Дата отправления:</strong> {{ tour.date_departure|date:"d.m.Y" }}</p>
                     <p><strong>Дата возвращения:</strong> {{ tour.date_return|date:"d.m.Y" }}</p>
-                    <p><strong>Цена:</strong> €{{ tour.price_tour }}</p>
+                    <p><strong>Цена:</strong> ₽{{ tour.price_tour }}</p>
                     <div class="mb-3">
                         <label for="paymentMethod" class="form-label">Способ оплаты</label>
-                        <select name="payment_method" id="paymentMethod" class="form-select" required>
+                        <select name="payment_method" id="paymentMethod" class="form-select bg-dark text-light" required>
                             <option value="CARD">Банковская карта</option>
                             <option value="CASH">Наличные</option>
                             <option value="ONLINE">Онлайн оплата (СБП)</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Забронировать</button>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success">Забронировать</button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-<!-- Модальное окно успешного бронирования -->
-<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="successModalLabel">Успешное бронирование</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-            </div>
-            <div class="modal-body">
-                <p id="successMessage">Тур успешно забронирован!</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Закрыть</button>
-            </div>
         </div>
     </div>
 </div>
@@ -136,9 +138,8 @@
                         }
                     });
     
-                    // Обрабатываем редирект
                     if (response.redirected) {
-                        window.location.href = response.url; // Переход на целевую страницу
+                        window.location.href = response.url;
                     } else {
                         const result = await response.json();
                         if (response.ok) {
@@ -160,4 +161,179 @@
         }
     });
 </script>
+<style>
+    .tour-image {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .favorite-toggle {
+        font-size: 24px;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.6);
+        border-radius: 50%;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        text-align: center;
+        transition: transform 0.2s, color 0.2s;
+    }
+
+    .favorite-toggle:hover {
+        color: #ff0000;
+        transform: scale(1.2);
+    }
+
+    .favorite-toggle .fa-heart {
+        color: #ff0000; /* Активное сердечко */
+    }
+
+    .favorite-toggle .fa-heart-o {
+        color: white; /* Неактивное сердечко */
+    }
+
+    .tour-details {
+        background-color: #222;
+        color: #ccc;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .tour-details h4 {
+        font-size: 1.8rem;
+    }
+
+    .tour-details .description {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    .list-group-item {
+        background-color: #333;
+        color: #ccc;
+        border: none;
+    }
+
+    .list-group-item strong {
+        color: #fff;
+    }
+
+    .list-group-item a {
+        text-decoration: underline;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border: none;
+        padding: 10px 20px;
+        font-size: 1.2rem;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+    .modal-content {
+        background-color: #222; /* Тёмный фон для модального окна */
+        color: #ccc; /* Светлый текст */
+        border-radius: 10px; /* Скруглённые углы */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); /* Тень для эффекта объёма */
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #444; /* Разделение верхней части */
+    }
+
+    .modal-footer {
+        border-top: 1px solid #444; /* Разделение нижней части */
+    }
+
+    .btn-close-white {
+        filter: invert(1); /* Белая кнопка закрытия */
+    }
+
+    .form-select {
+        border: 1px solid #444; /* Стили для выпадающего списка */
+        padding: 8px;
+        font-size: 1rem;
+    }
+
+    .form-select:focus {
+        border-color: #555;
+        box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); /* Эффект при фокусе */
+    }
+
+    .btn-outline-secondary {
+        color: #ccc;
+        border-color: #555;
+    }
+
+    .btn-outline-secondary:hover {
+        color: white;
+        background-color: #555;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border: none;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-secondary {
+        color: #ccc;
+        background-color: #444;
+        border: none;
+    }
+
+    .btn-secondary:hover {
+        background-color: #555;
+    }
+    .review-item {
+        border-bottom: 1px solid #444; /* Линия между отзывами */
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+
+    .review-item:last-child {
+        border-bottom: none; /* Убираем линию после последнего отзыва */
+    }
+
+    .text-primary {
+        color: #007bff; /* Цвет для имени пользователя */
+    }
+
+    .text-light {
+        color: #ccc; /* Основной цвет текста */
+    }
+
+    .text-danger {
+        color: #ff6666; /* Цвет для даты */
+    }
+
+    .btn-outline-secondary {
+        color: #ccc;
+        border-color: #555;
+    }
+
+    .btn-outline-secondary:hover {
+        color: white;
+        background-color: #555;
+    }
+
+    .card {
+        background-color: #222; /* Тёмный фон карточки */
+        border-radius: 10px; /* Скруглённые углы */
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5); /* Тень */
+    }
+</style>
 {% endblock %}

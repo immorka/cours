@@ -1,33 +1,50 @@
 {% extends 'travel/base.html' %}
+{% load tour_filters %}
 
 {% block content %}
 <div class="container mt-5">
-    <h1>Туры от оператора "{{ tour.operator_tour }}"</h1>
-    <p>{{ tour.discription_tour }}</p>
-    {% if tour.image %}
-        <img src="{{ tour.image.url }}" alt="{{ tour.name_tour }}" class="img-fluid mb-3">
-    {% else %}
-        <p>Изображение недоступно.</p>
-    {% endif %}
-
-    <h2>Отзывы ({{ total_reviews }})</h2>
-    {% if reviews %}
-        <ul class="list-group">
-            {% for review in reviews %}
-                <li class="list-group-item">
-                    <h5>{{ review.id_user.name_user }}</h5>
-                    <p class="mb-1">{{ review.text_review }}</p>
-                    {% if review.image %}
-                        <div class="mt-2">
-                            <img src="{{ review.image.url }}" alt="Изображение отзыва" style="max-width: 200px; height: auto;">
-                        </div>
-                    {% endif %}
-                    <small class="text-muted">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
-                </li>
+    <!-- Заголовок страницы -->
+    <h1 class="text-light text-center mb-4">Отзывы о турах</h1>
+    <div class="text-center mb-5">
+        <h3 class="text-primary">Туры от оператора "{{ tour.operator_tour }}"</h3>
+        <!-- Описание тура до программы -->
+        <p class="text-light">{{ tour.discription_tour|slice_0_before_program }}</p>
+        <!-- Список программы тура -->
+        <h5 class="text-light">Программа тура:</h5>
+        <ul class="list-group text-start mb-4">
+            {% for item in tour.discription_tour|program_list %}
+            <li class="list-group-item bg-dark text-light border-secondary">
+                {{ item }}
+            </li>
             {% endfor %}
         </ul>
+        <!-- Изображение тура -->
+        {% if tour.image %}
+            <img src="{{ tour.image.url }}" alt="{{ tour.name_tour }}" class="img-fluid rounded shadow mb-3" style="max-width: 600px;">
+        {% else %}
+            <p class="text-muted">Изображение недоступно.</p>
+        {% endif %}
+    </div>
+
+    <!-- Блок с отзывами -->
+    <h2 class="text-light mb-4">Отзывы ({{ total_reviews }})</h2>
+    {% if reviews %}
+        <div class="card bg-dark p-4">
+            {% for review in reviews %}
+            <div class="review-item border-bottom border-secondary pb-3 mb-3">
+                <h5 class="text-primary">Отзыв от: {{ review.id_user.name_user }}</h5>
+                <p class="text-light mb-2">{{ review.text_review }}</p>
+                {% if review.image %}
+                <div class="mt-2">
+                    <img src="{{ review.image.url }}" alt="Изображение отзыва" class="rounded" style="max-width: 200px; height: auto;">
+                </div>
+                {% endif %}
+                <small class="text-danger">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
+            </div>
+            {% endfor %}
+        </div>
     {% else %}
-        <p>Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
+        <p class="text-light">Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
     {% endif %}
 </div>
 {% endblock %}

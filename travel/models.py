@@ -34,7 +34,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
-    # Добавлено ManyToManyField через модель Favorite
     favorites = models.ManyToManyField(
         'Tour',
         through='Favorite',
@@ -57,10 +56,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class TourManager(models.Manager):
     def hot_tours(self):
-        return self.filter(is_hot=True)
+        return self.filter(is_hot=True).exclude(operator_tour="Архив")
 
     def cheap_tours(self, max_price):
-        return self.filter(price_tour__lte=max_price)
+        return self.filter(price_tour__lte=max_price).exclude(operator_tour="Архив")
     
 class Tour(models.Model):
     name_tour = models.CharField("Название тура", max_length=255)
@@ -98,8 +97,8 @@ class Tour(models.Model):
         if self.image:
             img_path = self.image.path
             with Image.open(img_path) as img:
-                if img.width > 350 or img.height > 250:
-                    output_size = (350, 250)
+                if img.width > 1920 or img.height > 1080 :
+                    output_size = (1920, 1080)
                     img.thumbnail(output_size)
                     img.save(img_path)
 
@@ -110,6 +109,7 @@ class Reservation(models.Model):
     status_pay = models.BooleanField("Статус оплаты",default=False)
     PAYMENT_METHODS = [('CARD', 'Банковская карта'), ('CASH', 'Наличные'), ('ONLINE', 'Онлайн оплата(СБП)')]
     payment_method = models.CharField("Метод оплаты", max_length=50, choices=PAYMENT_METHODS)
+    raw_id_fields = ('id_tour',)
     document = models.FileField(
         upload_to='reservation_documents/',
         blank=True,
@@ -131,12 +131,8 @@ class Review(models.Model):
     id_user = models.ForeignKey(User, verbose_name="Пользователь", on_delete=models.CASCADE, related_name='reviews')
     id_tour = models.ForeignKey(Tour, verbose_name="Тур", on_delete=models.CASCADE, related_name='reviews')
     text_review = models.TextField(max_length=500)
-    created_at = models.DateTimeField("Дата создания", auto_now_add=True)  # Новое поле
-    image = models.ImageField(upload_to='reviews/', blank=True, null=True, verbose_name="Изображение")  # Поле для загрузки файла
-
-    def clean(self):
-        if not self.text_review or self.text_review.strip() == "":
-            raise ValidationError({'text_review': 'Поле текста отзыва не может быть пустым.'})
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+    image = models.ImageField(upload_to='reviews/', blank=True, null=True, verbose_name="Изображение")
         
     class Meta:
         verbose_name = "Отзыв"
@@ -182,3 +178,30 @@ class Stock(models.Model):
 
     def __str__(self):
         return self.name_stock
+    
+    def save(self, *args, **kwargs):
+        tour = self.id_tour
+        is_new = self.pk is None
+
+        if not is_new:
+            old_stock = Stock.objects.get(pk=self.pk)
+
+            if old_stock.status_stock != self.status_stock:
+                if self.status_stock:
+                    tour.price_tour = max(tour.price_tour - self.stock_value, 0)
+                else:
+                    tour.price_tour += self.stock_value
+        else:
+            if self.status_stock:
+                tour.price_tour = max(tour.price_tour - self.stock_value, 0)
+
+        tour.save()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.status_stock:
+            tour = self.id_tour
+            tour.price_tour += self.stock_value
+            tour.save()
+
+        super().delete(*args, **kwargs)

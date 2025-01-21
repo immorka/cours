@@ -1,1 +1,1 @@
-console.log('Файл custom_form.js подключён!');
+console.log('файл подключён!');

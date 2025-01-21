@@ -1,121 +1,71 @@
 {% extends 'travel/base.html' %}
+{% load custom_tags %}
 
 {% block title %}Туры{% endblock %}
 
 {% block content %}
-<style>
-    .filters-container {
-        position: absolute;
-        right: 20px;
-        top: 100px;
-        width: 200px;
-        z-index: 1000;
-    }
-
-    .filters {
-        padding: 15px;
-        background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
-
-    .filters h4 {
-        font-size: 18px;
-        margin-bottom: 15px;
-    }
-
-    .filters .btn {
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
-
-    .card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .card-body {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .section-title {
-        margin-top: 50px;
-        margin-bottom: 20px;
-    }
-    .card-img-top {
-        width: 100%;
-        height: 250px; /* Высота фиксирована */
-        object-fit: cover; /* Масштабирует изображение, сохраняя пропорции */
-    }
-</style>
-
-<!--фильтры-->
+<!-- Фильтры -->
 <div class="filters-container">
     <div class="filters">
-        <h4>Фильтры</h4>
+        <h4 class="text-center">Фильтры</h4>
         <a href="?sort=asc" class="btn w-100 {% if sort_order == 'asc' %}btn-primary{% else %}btn-outline-primary{% endif %}">
             Цена: по возрастанию
         </a>
         <a href="?sort=desc" class="btn w-100 {% if sort_order == 'desc' %}btn-primary{% else %}btn-outline-primary{% endif %}">
             Цена: по убыванию
         </a>
-        
+
         <form method="get" class="mt-3">
-            <!-- Остальные фильтры (цена, оператор) -->
-            <label for="min_price">Минимальная цена:</label>
+            <label for="min_price" class="form-label">Минимальная цена:</label>
             <input type="number" id="min_price" name="min_price" class="form-control mb-2" 
                    value="{{ min_price|default:'' }}" placeholder="Введите мин. цену">
-            
-            <label for="max_price">Максимальная цена:</label>
+
+            <label for="max_price" class="form-label">Максимальная цена:</label>
             <input type="number" id="max_price" name="max_price" class="form-control mb-2" 
                    value="{{ max_price|default:'' }}" placeholder="Введите макс. цену">
-            
-            <label for="excluded_operator">Исключить оператора:</label>
+
+            <label for="excluded_operator" class="form-label">Исключить оператора:</label>
             <select name="excluded_operator" id="excluded_operator" class="form-control">
                 <option value="">Нет</option>
                 {% for operator in operators %}
-                    <option value="{{ operator }}" {% if operator == excluded_operator %}selected{% endif %}>
-                        {{ operator }}
-                    </option>
+                <option value="{{ operator }}" {% if operator == excluded_operator %}selected{% endif %}>
+                    {{ operator }}
+                </option>
                 {% endfor %}
             </select>
-        
+
             <button type="submit" class="btn btn-outline-primary mt-2 w-100">Применить</button>
         </form>
     </div>
 </div>
 
-{% load custom_tags %}
-<h2 class="text-center mb-4">Всего доступно туров: {% total_tours %}</h2>
-
-<!--основной список туров-->
+<!-- Основной список туров -->
 <div class="container py-5">
     <h1 class="text-center mb-4">Наши туры</h1>
     <p class="text-center">Средняя цена тура: {{ average_price|default:"не указана" }} ₽</p>
 
-    <!-- Поиск по названию тура -->
+    <!-- Поиск -->
     <form method="get" class="mb-4 text-center">
-        <label for="search_query" class="form-label">Поиск по названию: </label>
+        <label for="search_query" class="form-label">Поиск по названию:</label>
         <input type="text" id="search_query" name="search_query" class="form-control d-inline-block w-50"
                value="{{ search_query|default:'' }}" placeholder="Введите название тура">
         <button type="submit" class="btn btn-primary mt-2">Искать</button>
     </form>
 
-    <!-- Основной список туров -->
-    <div class="row">
+    <!-- Сетка туров -->
+    <div class="row row-cols-1 row-cols-md-3 g-4">
         {% for tour in tours %}
-        <div class="col-md-4 mb-3">
-            <div class="card h-100">
+        <div class="col">
+            <div class="card h-100 position-relative">
                 {% if tour.image %}
                 <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
                 {% else %}
-                <img src="https://via.placeholder.com/350x250" alt="Изображение недоступно" class="img-fluid">
+                <img src="https://via.placeholder.com/350x250" class="card-img-top" alt="Изображение недоступно">
                 {% endif %}
+
+                <a href="{% url 'add_to_favorite' tour.id %}" class="favorite-toggle">
+                    <i class="{% if tour.is_favorite %}fas fa-heart text-danger{% else %}far fa-heart{% endif %}"></i>
+                </a>
                 <div class="card-body">
                     <h5 class="card-title">{{ tour.name_tour }}</h5>
                     <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
@@ -125,8 +75,9 @@
         </div>
         {% endfor %}
     </div>
+</div>
 
-    <!--пагинация-->
+    <!-- Пагинация -->
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
             {% if tours.has_previous %}
@@ -152,34 +103,115 @@
             {% endif %}
         </ul>
     </nav>
-
-    <!--секция дешёвых туров-->
-    <h2 class="text-center section-title">Дешёвые туры</h2>
-    <p class="text-center">
-        Количество туров дешевле 20,000 рублей: {% count_cheap_tours 20000 %}
-    </p>
-
-    {% if cheap_tours %}
-    <div class="row">
-        {% for tour in cheap_tours %}
-        <div class="col-md-4 mb-3">
-            <div class="card h-100">
-                {% if tour.image %}
-                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
-                {% else %}
-                <img src="https://via.placeholder.com/350x200" class="card-img-top" alt="Нет изображения">
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ tour.name_tour }}</h5>
-                    <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
-                    <a href="{% url 'tour-detail' tour.id %}" class="btn btn-outline-primary mt-auto">Подробнее</a>
+        <!--секция дешёвых туров-->
+        <h2 class="text-center section-title">Дешёвые туры</h2>
+        <p class="text-center">
+            Количество туров дешевле 20,000 рублей: {% count_cheap_tours 20000 %}
+        </p>
+    
+        {% if cheap_tours %}
+        <div class="row">
+            {% for tour in cheap_tours %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    {% if tour.image %}
+                    <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name_tour }}">
+                    {% else %}
+                    <img src="https://via.placeholder.com/350x200" class="card-img-top" alt="Нет изображения">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ tour.name_tour }}</h5>
+                        <p class="card-text">{{ tour.discription_tour|truncatechars:100 }}</p>
+                        <a href="{% url 'tour-detail' tour.id %}" class="btn btn-outline-primary mt-auto">Подробнее</a>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <p class="text-center">Нет дешёвых туров.</p>
+        {% endif %}
     </div>
-    {% else %}
-    <p class="text-center">Нет дешёвых туров.</p>
-    {% endif %}
 </div>
+<style>
+    .filters-container {
+        position: absolute;
+        right: 20px;
+        top: 100px;
+        width: 200px;
+        z-index: 1000;
+    }
+
+    .filters {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .filters h4 {
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: black;
+    }
+
+    .filters .btn {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .card-img-top {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .favorite-toggle {
+        font-size: 20px; /* Оптимальный размер сердечка */
+        width: 40px; /* Фиксированная ширина */
+        height: 40px; /* Фиксированная высота */
+        line-height: 40px; /* Выравнивание значка по центру */
+        color: white; /* Белый цвет по умолчанию */
+        background-color: rgba(0, 0, 0, 0.6); /* Полупрозрачный фон */
+        border-radius: 50%; /* Круглый фон */
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        text-align: center; /* Центрирование значка */
+        transition: transform 0.2s, color 0.2s;
+    }
+
+    .favorite-toggle:hover {
+        color: #ff0000; /* Красный цвет при наведении */
+        transform: scale(1.2); /* Увеличение при наведении */
+    }
+
+    .favorite-toggle .fa-heart {
+        color: #ff0000; /* Красное сердечко для избранных туров */
+    }
+
+    .favorite-toggle .fa-heart-o {
+        color: white; /* Белое сердечко для неактивных туров */
+    }
+
+    .section-title {
+        margin-top: 50px;
+        margin-bottom: 20px;
+    }
+</style>
+
 {% endblock %}

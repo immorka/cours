@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Exists, OuterRef
 from datetime import date
 from .models import User, Tour, Reservation, Review, TravelHistory, Favorite, Stock
 from .serializers import (
@@ -152,13 +152,16 @@ def index(request):
     hot_tours = Tour.objects.hot_tours()
 
     has_hot_tours = hot_tours.exists()
-
+    latest_tours = Tour.objects.all().order_by('date_departure')[:3]
     operator_data = Tour.objects.values('operator_tour').annotate(tour_count=models.Count('operator_tour'))
+    latest_reviews = Review.objects.all().order_by('-created_at')[:3]
 
     return render(request, 'travel/index.html', {
         'hot_tours': hot_tours,
         'operator_data': operator_data,
         'has_hot_tours': has_hot_tours,
+        'latest_tours': latest_tours,
+        'latest_reviews': latest_reviews,
 
     })
 
@@ -168,11 +171,24 @@ def tours(request):
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
     search_query = request.GET.get('search_query', '')
+    destination = request.GET.get('destination', None)
+
+    tours_list = Tour.objects.exclude(operator_tour="Архив")
+
+    if request.user.is_authenticated:
+        tours_list = tours_list.annotate(
+            is_favorite=Exists(
+                Favorite.objects.filter(id_user=request.user, id_tour=OuterRef('id'))
+            )
+        )
+
+    if destination:
+        tours_list = tours_list.filter(destination=destination)
 
     if sort_order == 'desc':
-        tours_list = Tour.objects.all().order_by('-price_tour')
+        tours_list = tours_list.order_by('-price_tour')
     else:
-        tours_list = Tour.objects.all().order_by('price_tour')
+        tours_list = tours_list.order_by('price_tour')
 
     if min_price:
         tours_list = tours_list.filter(price_tour__gte=min_price)
@@ -185,7 +201,6 @@ def tours(request):
     if search_query:
         tours_list = tours_list.filter(name_tour__icontains=search_query)
 
-
     paginator = Paginator(tours_list, 6)
     page = request.GET.get('page')
 
@@ -196,15 +211,19 @@ def tours(request):
     except EmptyPage:
         tours = paginator.page(paginator.num_pages)
 
+    cheap_tours = Tour.objects.cheap_tours(20000).annotate(
+        is_favorite=Exists(
+            Favorite.objects.filter(id_user=request.user, id_tour=OuterRef('id'))
+        )
+    )
     operators = Tour.objects.values_list('operator_tour', flat=True).distinct()
 
     hot_tours = Tour.objects.hot_tours()
     cheap_tours = Tour.objects.cheap_tours(20000)
-    average_price = Tour.objects.all().aggregate(Avg('price_tour'))['price_tour__avg']
-    average_price = Tour.objects.all().aggregate(Avg('price_tour'))['price_tour__avg']
+    average_price = Tour.objects.aggregate(Avg('price_tour'))['price_tour__avg']
     if average_price:
         average_price = round(average_price)
-        
+
     return render(request, 'travel/tours.html', {
         'tours': tours,
         'hot_tours': hot_tours,
@@ -213,7 +232,6 @@ def tours(request):
         'average_price': average_price,
         'operators': operators,
         'excluded_operator': excluded_operator,
-
     })
 
 def auth_view(request):
@@ -279,13 +297,8 @@ def manage_reviews(request):
     if request.method == 'POST':
         form = ReviewForm(request.POST, request.FILES)
         if form.is_valid():
-            text_review = form.cleaned_data.get('text_review')
-
-            if "запрещённое слово" in text_review.lower():
-                form.add_error('text_review', 'Ваш отзыв содержит запрещённые слова.')
-            else:
-                form.save(user=request.user)
-                return HttpResponseRedirect(reverse('manage_reviews'))
+            form.save(user=request.user)
+            return HttpResponseRedirect(reverse('manage_reviews'))
     else:
         form = ReviewForm()
     return render(request, 'travel/manage_reviews.html', {'reviews': reviews, 'form': form})
@@ -324,7 +337,10 @@ def delete_review(request):
 
 def tour_detail(request, id):
     tour = get_object_or_404(Tour, id=id)
-
+    is_favorite = (
+        Favorite.objects.filter(id_user=request.user, id_tour=tour).exists()
+        if request.user.is_authenticated else False
+    )
     latest_reviews = Review.objects.filter(id_tour=tour).order_by('-created_at')[:3]
     
     operator_data = Tour.objects.values('operator_tour').annotate(tour_count=models.Count('operator_tour'))
@@ -333,7 +349,7 @@ def tour_detail(request, id):
         'tour': tour,
         'latest_reviews': latest_reviews,
         'operator_data': operator_data,
-
+        'is_favorite': is_favorite,
     })
 
 @login_required
@@ -399,3 +415,13 @@ def operator_tours(request, operator_name):
         'operator_name': operator_name,
         'tours': tours,
     })
+
+def add_to_favorite(request, tour_id):
+    if request.user.is_authenticated:
+        tour = get_object_or_404(Tour, id=tour_id)
+        favorite, created = Favorite.objects.get_or_create(id_user=request.user, id_tour=tour)
+
+        if not created:
+            favorite.delete()
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))

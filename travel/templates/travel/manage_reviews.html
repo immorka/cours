@@ -1,124 +1,145 @@
 {% extends 'travel/base.html' %}
 {% load custom_tags %}
-
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/custom_form.css' %}">
 {% block title %}Управление отзывами{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <h1 class="text-center mb-4">Ваши отзывы</h1>
-    <div class="mb-4">
-      <h2>Добавить отзыв</h2>
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.id_tour.label_tag }}
-            {{ form.id_tour }}
-            <div class="form-text">{{ form.id_tour.help_text }}</div>
-            {% if form.id_tour.errors %}
+    <!-- Заголовок страницы -->
+    <h1 class="text-center text-light mb-4">Ваши отзывы</h1>
+
+    <!-- Форма добавления отзыва -->
+    <div class="card bg-dark text-light mb-4 p-4 shadow-sm">
+        <h2 class="text-light mb-3">Добавить отзыв</h2>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+                {{ form.id_tour.label_tag }}
+                {{ form.id_tour }}
+                <div class="form-text">{{ form.id_tour.help_text }}</div>
+                {% if form.id_tour.errors %}
                 <div class="text-danger">{{ form.id_tour.errors }}</div>
-            {% endif %}
-        </div>
-        <div class="mb-3">
-            {{ form.text_review.label_tag }}
-            {{ form.text_review }}
-            <div class="form-text">{{ form.text_review.help_text }}</div>
-            {% if form.text_review.errors %}
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                {{ form.text_review.label_tag }}
+                {{ form.text_review }}
+                <div class="form-text">{{ form.text_review.help_text }}</div>
+                {% if form.text_review.errors %}
                 <div class="text-danger">{{ form.text_review.errors }}</div>
-            {% endif %}
-        </div>
-        <div class="mb-3">
-            {{ form.image.label_tag }}
-            {{ form.image }}
-            <div class="form-text">{{ form.image.help_text }}</div>
-            {% if form.image.errors %}
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                {{ form.image.label_tag }}
+                {{ form.image }}
+                <div class="form-text">{{ form.image.help_text }}</div>
+                {% if form.image.errors %}
                 <div class="text-danger">{{ form.image.errors }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+    </div>
+
+    <!-- Список отзывов -->
+    <div class="card bg-dark text-light shadow-sm">
+        <h2 class="card-header text-light">Ваши текущие отзывы</h2>
+        <div class="card-body">
+            {% if reviews %}
+            <ul class="list-group list-group-flush">
+                {% for review in reviews %}
+                <li class="list-group-item bg-dark text-light d-flex justify-content-between align-items-center border-secondary">
+                    <div>
+                        <h5 class="text-primary">{{ review.id_tour.name_tour }}</h5>
+                        <p class="mb-2">{{ review.text_review }}</p>
+                        {% if review.image %}
+                        <img src="{{ review.image.url }}" alt="Изображение отзыва" class="rounded mt-2" style="max-width: 150px;">
+                        {% endif %}
+                        <small class="text-danger">Дата: {{ review.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-secondary btn-sm me-2 edit-review-btn" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editReviewModal"
+                                data-review-id="{{ review.id }}" 
+                                data-review-text="{{ review.text_review }}" 
+                                data-review-image="{% if review.image %}{{ review.image.url }}{% else %}''{% endif %}">
+                            Редактировать
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-review-btn" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#deleteReviewModal" 
+                                data-review-id="{{ review.id }}">
+                            Удалить
+                        </button>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-light">Отзывов пока нет. Будьте первым, кто оставит отзыв!</p>
             {% endif %}
         </div>
-        <button type="submit" class="btn btn-primary">Добавить</button>
-    </form>
-  </div>
-    <div>
-        <h2>Ваши текущие отзывы</h2>
-        <ul class="list-group">
-            {% for review in reviews %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>{{ review.id_tour.name_tour }}: {{ review.text_review }}</span>
-                <div>
-                    <button class="btn btn-secondary btn-sm edit-review-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editReviewModal"
-                            data-review-id="{{ review.id }}"
-                            data-review-text="{{ review.text_review }}"
-                            data-review-image="{% if review.image %}{{ review.image.url }}{% else %}''{% endif %}">
-                        Редактировать
-                    </button>
-                    <button class="btn btn-danger btn-sm delete-review-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#deleteReviewModal"
-                            data-review-id="{{ review.id }}">
-                        Удалить
-                    </button>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
     </div>
-      <div class="modal fade" id="editReviewModal" tabindex="-1" aria-labelledby="editReviewModalLabel" aria-hidden="true">
+
+    <!-- Модальное окно редактирования -->
+    <div class="modal fade" id="editReviewModal" tabindex="-1" aria-labelledby="editReviewModalLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content bg-dark text-light">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editReviewModalLabel">Редактировать отзыв</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
                 <div class="modal-body">
-                  <form method="post" enctype="multipart/form-data" action="{% url 'edit_review_view' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="review_id" id="reviewIdInput">
-                    <div class="mb-3">
-                        <label for="reviewTextInput" class="form-label">Текст отзыва</label>
-                        <textarea class="form-control" name="review_text" id="reviewTextInput" rows="3"></textarea>
-                    </div>
-                    <div class="mb-3" id="currentImageContainer" style="display: none;">
-                        <p>Текущее изображение:</p>
-                        <img id="currentImage" src="#" alt="Изображение отзыва" style="max-width: 200px; height: auto;">
-                        <div class="form-check">
-                            <input type="checkbox" name="clear_image" id="clearImageCheckbox" class="form-check-input">
-                            <label for="clearImageCheckbox" class="form-check-label">Удалить изображение</label>
+                    <form method="post" enctype="multipart/form-data" action="{% url 'edit_review_view' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="review_id" id="reviewIdInput">
+                        <div class="mb-3">
+                            <label for="reviewTextInput" class="form-label">Текст отзыва</label>
+                            <textarea class="form-control bg-dark text-light" name="review_text" id="reviewTextInput" rows="3"></textarea>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="reviewImageInput" class="form-label">Загрузить новое изображение</label>
-                        <input type="file" name="review_image" id="reviewImageInput" class="form-control">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-                </form>
+                        <div class="mb-3" id="currentImageContainer" style="display: none;">
+                            <p>Текущее изображение:</p>
+                            <img id="currentImage" src="#" alt="Изображение отзыва" style="max-width: 200px; height: auto;">
+                            <div class="form-check">
+                                <input type="checkbox" name="clear_image" id="clearImageCheckbox" class="form-check-input">
+                                <label for="clearImageCheckbox" class="form-check-label">Удалить изображение</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reviewImageInput" class="form-label">Загрузить новое изображение</label>
+                            <input type="file" name="review_image" id="reviewImageInput" class="form-control bg-dark text-light">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-      </div>
 
-      <div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel" aria-hidden="true">
+    <!-- Модальное окно удаления -->
+    <div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel" aria-hidden="true">
         <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="deleteReviewModalLabel">Подтверждение удаления</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteReviewModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить этот отзыв?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <form id="deleteReviewForm" method="post" action="{% url 'delete_review' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="review_id" id="deleteReviewIdInput">
+                        <button type="submit" class="btn btn-danger">Удалить</button>
+                    </form>
+                </div>
             </div>
-            <div class="modal-body">
-              Вы уверены, что хотите удалить этот отзыв?
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-              <form id="deleteReviewForm" method="post" action="{% url 'delete_review' %}">
-                {% csrf_token %}
-                <input type="hidden" name="review_id" id="deleteReviewIdInput">
-                <button type="submit" class="btn btn-danger">Удалить</button>
-              </form>
-            </div>
-          </div>
         </div>
-      </div>
+    </div>
 </div>
 
 <script>
@@ -134,12 +155,11 @@
           btn.addEventListener('click', () => {
               const reviewId = btn.getAttribute('data-review-id');
               const reviewText = btn.getAttribute('data-review-text');
-              const reviewImageUrl = btn.getAttribute('data-review-image'); // Новый атрибут для изображения
+              const reviewImageUrl = btn.getAttribute('data-review-image');
 
               reviewIdInput.value = reviewId;
               reviewTextInput.value = reviewText;
 
-              // Отображение текущего изображения
               if (reviewImageUrl) {
                   currentImage.src = reviewImageUrl;
                   currentImageContainer.style.display = 'block';

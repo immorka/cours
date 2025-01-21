@@ -1,36 +1,47 @@
 {% extends 'travel/base.html' %}
 
 {% block content %}
-<h2 class="text-center">Мои бронирования</h2>
-<table class="table mt-4">
-    <thead>
-        <tr>
-            <th>Тур</th>
-            <th>Дата отправления</th>
-            <th>Дата возвращения</th>
-            <th>Статус оплаты</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for reservation in reservations %}
-        <tr>
-            <td>{{ reservation.id_tour.name_tour }}</td>
-            <td>{{ reservation.id_tour.date_departure }}</td>
-            <td>{{ reservation.id_tour.date_return }}</td>
-            <td>
-                {% if reservation.status_pay %}
-                    <span class="badge bg-success">Оплачено</span>
-                {% else %}
-                    <span class="badge bg-danger">Не оплачено</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4" class="text-center">У вас нет бронирований.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<a href="{% url 'profile' %}" class="btn btn-secondary mt-3">Назад в личный кабинет</a>
+<div class="container py-5">
+    <!-- Заголовок страницы -->
+    <h2 class="text-center text-light mb-4">Мои бронирования</h2>
+
+    <!-- Таблица бронирований -->
+    <div class="card bg-dark text-light shadow-sm p-4">
+        <table class="table table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>Тур</th>
+                    <th>Дата отправления</th>
+                    <th>Дата возвращения</th>
+                    <th>Статус оплаты</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reservation in reservations %}
+                <tr>
+                    <td>{{ reservation.id_tour.name_tour }}</td>
+                    <td>{{ reservation.id_tour.date_departure|date:"d.m.Y" }}</td>
+                    <td>{{ reservation.id_tour.date_return|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if reservation.status_pay %}
+                        <span class="badge bg-success">Оплачено</span>
+                        {% else %}
+                        <span class="badge bg-danger">Не оплачено</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">У вас нет бронирований.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Кнопка возврата -->
+    <div class="text-center mt-4">
+        <a href="{% url 'profile' %}" class="btn btn-outline-light">Назад в личный кабинет</a>
+    </div>
+</div>
 {% endblock %}

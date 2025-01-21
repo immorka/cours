@@ -19,7 +19,7 @@ class ReservationInline(admin.TabularInline):
     model = Reservation
     extra = 1 
     fields = ('id_tour', 'date_reservation', 'payment_method', 'status_pay') 
-    readonly_fields = ('id_tour', 'date_reservation', 'payment_method', 'status_pay')
+    readonly_fields = ('id_tour', 'date_reservation', 'payment_method')
 
 class ReviewInline(admin.TabularInline):
     model = Review
@@ -50,12 +50,16 @@ class UserAdmin(BaseUserAdmin):
 
     list_display = ('email_user', 'name_user', 'is_staff', 'is_active', 'role_user')
     list_filter = ('is_staff', 'is_active', 'role_user')
+    list_display_links = ("name_user",'email_user')
+    readonly_fields = ('email_user', 'name_user','number_user')
 
     fieldsets = (
         (None, {'fields': ('email_user', 'password')}),
         ('Персональная информация', {'fields': ('name_user', 'number_user', 'role_user')}),
         ('Права доступа', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
     )
+    filter_horizontal = ('groups', 'user_permissions') 
+    inlines = [FavoriteInline]
 
     add_fieldsets = (
         (None, {
@@ -73,7 +77,9 @@ class UserAdmin(BaseUserAdmin):
 
 admin.site.register(User, UserAdmin)
 
-
+class FavoriteInline(admin.TabularInline):
+    model = Favorite
+    extra = 1 
 
 @admin.register(Tour)
 class TourAdmin(ExportMixin, admin.ModelAdmin):
@@ -84,6 +90,7 @@ class TourAdmin(ExportMixin, admin.ModelAdmin):
     search_fields = ("name_tour", "destination")
     actions = ["archive_old_tours", "increase_price", "delete_selected_tours"]
     inlines = [ReservationInline]
+    date_hierarchy = 'date_departure'
     fieldsets = (
         ("Основная информация", {"fields": ("name_tour", "discription_tour", "operator_tour", "image", "video_url")}),
         ("Даты и места", {"fields": ("departure", "destination", "date_departure", "date_return")}),
@@ -92,16 +99,11 @@ class TourAdmin(ExportMixin, admin.ModelAdmin):
     verbose_name = "Тур"
     verbose_name_plural = "Туры"
 
+    @admin.display(boolean=True, description="Заархивирован")
     def is_archived(self, obj):
         return obj.operator_tour == "Архив"
 
-    is_archived.boolean = True
-    is_archived.short_description = "Заархивирован"
-
     def archive_old_tours(self, request, queryset):
-        """
-        Архивирование старых туров.
-        """
         today = timezone.now().date()
         archived = queryset.filter(date_return__lt=today)
         count = archived.update(operator_tour="Архив")
@@ -157,7 +159,7 @@ class ReviewAdmin(admin.ModelAdmin):
     search_fields = ("id_user__name_user", "id_tour__name_tour")
     verbose_name = "Отзыв"
     verbose_name_plural = "Отзывы"
-
+    
 @admin.register(TravelHistory)
 class TravelHistoryAdmin(admin.ModelAdmin):
     list_display = ("id", "id_user", "id_tour")
@@ -181,7 +183,7 @@ class StockAdmin(ExportMixin, admin.ModelAdmin):
     actions = ["deactivate_all_stocks"]
     verbose_name = "Акция"
     verbose_name_plural = "Акции"
-
+    raw_id_fields = ("id_tour",)
     def deactivate_all_stocks(self, request, queryset):
         count = queryset.update(status_stock=False)
         self.message_user(request, f"Деактивировано {count} акций.")
